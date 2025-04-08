@@ -2,17 +2,6 @@
 #include <stdlib.h>
 #include "MVTipos.h"
 #include "Operaciones.h"
-#define CS  0
-#define DS  1
-#define IP  5
-#define CC  8
-#define AC  9
-#define EAX  10
-#define EBX  11
-#define ECX  12
-#define EDX  13
-#define EEX  14
-#define EFX  15
 
 //#define BASE_SEG(x) ((x) >> 16)
 //#define TAM_SEG(x)  ((x) & 0xFFFF)
@@ -116,12 +105,14 @@ TInstruccion LeerInstruccionCompleta(char *memoria, int ip, int *ErrorFlag) {
             break;
         }
         case 2: {// inmediato
-            inst.op2.valor = memoria[cursor] | (memoria[cursor + 1] << 8);
+            //inst.op2.valor = memoria[cursor] | (memoria[cursor + 1] << 8);    //little-endian
+            inst.op2.valor = (memoria[cursor] << 8) | memoria[cursor + 1];      //big-endian
             cursor += 2;
             break;
         }
         case 3: {// memoria
-            inst.op2.desplazamiento = memoria[cursor] | (memoria[cursor + 1] << 8);
+            //inst.op2.desplazamiento = memoria[cursor] | (memoria[cursor + 1] << 8); //little-endian
+            inst.op2.desplazamiento = (memoria[cursor] << 8) | memoria[cursor + 1]; //big-endian
             unsigned char byte = memoria[cursor + 2];
             inst.op2.registro = (byte >> 4) & 0x0F;
             cursor += 3;
@@ -138,12 +129,14 @@ TInstruccion LeerInstruccionCompleta(char *memoria, int ip, int *ErrorFlag) {
             break;
         }
         case 2: {
-            inst.op1.valor = memoria[cursor] | (memoria[cursor + 1] << 8);
+            //inst.op1.valor = memoria[cursor] | (memoria[cursor + 1] << 8);            //little-endian
+            inst.op1.valor = (memoria[cursor] << 8) | memoria[cursor + 1];              //big-endian
             cursor += 2;
             break;
         }
         case 3: {
-            inst.op1.desplazamiento = memoria[cursor] | (memoria[cursor + 1] << 8);
+            //inst.op1.desplazamiento = memoria[cursor] | (memoria[cursor + 1] << 8);   //little-endian
+            inst.op1.desplazamiento = (memoria[cursor] << 8) | memoria[cursor + 1];     //big-endian
             unsigned char byte = memoria[cursor + 2];
             inst.op1.registro = (byte >> 4) & 0x0F;
             cursor += 3;
