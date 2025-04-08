@@ -38,6 +38,10 @@ int main(){
         InstruccionActual = LeerInstruccionCompleta(mv.memoria, ipActual, &ErrorFlag);
         MostrarInstruccion(InstruccionActual);
 
+        if (InstruccionActual.codOperacion == 0x0F) { // STOP
+            printf("\n>> Instruccion STOP encontrada. Fin del programa.\n");
+            break;
+        }
 
         mv.registros[5] += InstruccionActual.tamanio;
     }
