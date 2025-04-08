@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "MVTipos.h"
+#include "Operaciones.h"
 #define CS  0
 #define DS  1
 #define IP  5
@@ -23,19 +24,19 @@ TInstruccion LeerInstruccionCompleta(char *memoria, int ip, int *ErrorFlag);
 int main(){
     FILE *archBinario;
     TMV mv;
-    unsigned short int ErrorFlag = 0;                       // Bandera para detectar errores
+    int ErrorFlag = 0;                                      // Bandera para detectar errores
     TInstruccion InstruccionActual;                         // Para cargar la instruccion act
-    unsigned int ipActual, i;                               // Instruction Pointer
-    unsigned short tamCod;                                  // Para leer el tama�o del codigo
-    char *header =(char *)malloc(sizeof(char) * 6);         // 0 - 4 Identificador �VMX25�
-                                                            // 5 Versi�n "1"
-                                                            // 6 - 7 Tama�o del codigo
+    unsigned int ipActual;                                  // Instruction Pointer
+    unsigned short tamCod;                                  // Para leer el tamanio del codigo
+    char *header =(char *)malloc(sizeof(char) * 6);         // 0 - 4 Identificador "VMX25"
+                                                            // 5 Version "1"
+                                                            // 6 - 7 Tamanio del codigo
 
     archBinario = fopen("filename.vmx","rb");
     fread(header, sizeof(char), 6, archBinario);            // Obtengo el header (6 bytes)
-    fread(&tamCod, sizeof(unsigned short), 1, archBinario); // Leo el tama�o del codigo (2 bytes)
-    mv.TDS[0] = (0 << 16) | tamCod;                         // Segmento de c�digo: base = 0, tama�o = tamCod
-    mv.TDS[1] = (tamCod << 16) | (16384 - tamCod);          // Segmento de datos: base = tamCod, tama�o restante
+    fread(&tamCod, sizeof(unsigned short), 1, archBinario); // Leo el tamanio del codigo (2 bytes)
+    mv.TDS[0] = (0 << 16) | tamCod;                         // Segmento de codigo: base = 0, tamanio = tamCod
+    mv.TDS[1] = (tamCod << 16) | (16384 - tamCod);          // Segmento de datos: base = tamCod, tamanio restante
 
     fread(mv.memoria, sizeof(char), tamCod, archBinario);   // Carga la totalidad del codigo
     fclose(archBinario);
@@ -46,6 +47,8 @@ int main(){
         ipActual = mv.registros[5];
 
         InstruccionActual = LeerInstruccionCompleta(mv.memoria, ipActual, &ErrorFlag);
+        MostrarInstruccion(InstruccionActual);
+
 
         mv.registros[5] += InstruccionActual.tamanio;
     }
@@ -70,7 +73,7 @@ void DecodificarInstruccion(char instruccion,char *tipoOp1,char *tipoOp2,char *C
         // Validacion adicional: solo se permiten tipos A 01 o 11
         // Creo  que es innecesario ya que (0x10 <= CodOperacion <= 0x1E)
         if (*tipoOp1 != 0x01 && *tipoOp1 != 0x03) {
-            *ErrorFlag = 1; // Tipo de operando A inv�lido
+            *ErrorFlag = 1; // Tipo de operando A invalido
         }
     }
     else if (*CodOperacion <= 0x08) {
@@ -78,7 +81,7 @@ void DecodificarInstruccion(char instruccion,char *tipoOp1,char *tipoOp2,char *C
         *tipoOp1 = (instruccion >> 6) & 0x03;  // bits 7�6
         *tipoOp2 = 0;
 
-        // Validaci�n: bit 5 debe ser 0 (relleno)
+        // Validacion: bit 5 debe ser 0 (relleno)
         if (((instruccion >> 5) & 0x01) != 0) {
             *ErrorFlag = 1;
         }
@@ -101,7 +104,7 @@ TInstruccion LeerInstruccionCompleta(char *memoria, int ip, int *ErrorFlag) {
     inst.op1.tipo = tipo1;
     inst.op2.tipo = tipo2;
 
-    // 2. Leer operandos seg�n tipo (en orden: primero B, luego A)
+    // 2. Leer operandos segun tipo (en orden: primero B, luego A)
     int cursor = ip + 1;
 
     // --- OPERANDO B ---

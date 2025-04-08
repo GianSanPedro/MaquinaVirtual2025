@@ -32,7 +32,10 @@
 			<Add option="-Wall" />
 		</Compiler>
 		<Unit filename="MVTipos.h" />
-		<Unit filename="MVfuncionesTiposProtos.h" />
+		<Unit filename="Operaciones.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Operaciones.h" />
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
 		</Unit>
