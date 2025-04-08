@@ -1,3 +1,3 @@
 
-void MostrarInstruccion(TInstruccion inst);
+void MostrarInstruccion(TInstruccion inst, char *memoria);
 void MostrarOperando(TOperando op);

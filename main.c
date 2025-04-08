@@ -10,9 +10,11 @@
 void DecodificarInstruccion(char instruccion,char *operando1,char *operando2,char *operacion,int *ErrorFlag);
 TInstruccion LeerInstruccionCompleta(char *memoria, int ip, int *ErrorFlag);
 
-int main(){
+int main(int argc, char *argv[]){
+
     FILE *archBinario;
     TMV mv;
+    int modoDisassembler = 0;
     int ErrorFlag = 0;                                      // Bandera para detectar errores
     TInstruccion InstruccionActual;                         // Para cargar la instruccion act
     unsigned int ipActual;                                  // Instruction Pointer
@@ -20,7 +22,14 @@ int main(){
     char *header =(char *)malloc(sizeof(char) * 6);         // 0 - 4 Identificador "VMX25"
                                                             // 5 Version "1"
                                                             // 6 - 7 Tamanio del codigo
+    // Revisar si se paso el parametro -d
+    for (int i = 1; i < argc; i++) {                        //argc (argument count)
+        if (strcmp(argv[i], "-d") == 0) {                   //argv[] (argument vector)
+            modoDisassembler = 1;
+        }
+    }
 
+    //Cargo en memoria
     archBinario = fopen("filename.vmx","rb");
     fread(header, sizeof(char), 6, archBinario);            // Obtengo el header (6 bytes)
     fread(&tamCod, sizeof(unsigned short), 1, archBinario); // Leo el tamanio del codigo (2 bytes)
@@ -36,7 +45,9 @@ int main(){
         ipActual = mv.registros[5];
 
         InstruccionActual = LeerInstruccionCompleta(mv.memoria, ipActual, &ErrorFlag);
-        MostrarInstruccion(InstruccionActual);
+        if (modoDisassembler) {
+            MostrarInstruccion(InstruccionActual, mv.memoria);
+        }
 
         if (InstruccionActual.codOperacion == 0x0F) { // STOP
             printf("\n>> Instruccion STOP encontrada. Fin del programa.\n");

@@ -36,9 +36,6 @@ const char *regNombres[] = {
     "EFX"  // 15
 };
 
-
-const char *segmentos[] = { "E", "L", "H", "" }; // EAX, AL, AH, AX
-
 void MostrarOperando(TOperando op) {
     if (op.tipo == 1) { // Registro
 
@@ -113,14 +110,28 @@ void MostrarOperando(TOperando op) {
     }
 }
 
+void MostrarInstruccion(TInstruccion inst, char *memoria) {
+    // Dirección IP en hexadecimal (4 dígitos)
+    printf("[%.4X] ", inst.ipInicial);
 
-void MostrarInstruccion(TInstruccion inst) {
-    printf("%s\t", mnemonicos[(int)inst.codOperacion]);
+    // Mostrar instrucción en hexa, byte por byte
+    for (int i = 0; i < inst.tamanio; i++) {
+        printf("%.2X ", (unsigned char)memoria[inst.ipInicial + i]);
+    }
 
+    // Rellenar espacio si la instrucción es corta (para alinear el pipe |)
+    for (int i = inst.tamanio; i < 6; i++) {
+        printf("   ");
+    }
+
+    printf("|  %s", mnemonicos[inst.codOperacion]);
+
+    // Mostrar operandos si existen
     int tieneOp1 = inst.op1.tipo != 0;
     int tieneOp2 = inst.op2.tipo != 0;
 
     if (tieneOp1) {
+        printf("     ");
         MostrarOperando(inst.op1);
         if (tieneOp2) {
             printf(", ");
