@@ -1,9 +1,21 @@
+#define CS  0
+#define DS  1
+#define IP  5
+#define CC  8
+#define AC  9
+#define EAX  10
+#define EBX  11
+#define ECX  12
+#define EDX  13
+#define EEX  14
+#define EFX  15
 
 typedef char instruccion;
 typedef struct{
     instruccion memoria[16384];     // Memoria principal (RAM) de 16 KiB
     int TDS[8];                     // Tabla de Descriptores de Segmentos
     unsigned int registros[16];     // 16 registros de 4 bytes (se utilizan 11 en esta primera parte)
+    int ErrorFlag;                  // Bandera para detectar errores
 }TMV;
 
 typedef struct {
@@ -21,3 +33,4 @@ typedef struct {
     int tamanio;          // Tamaño total de la instrucción en bytes
     int ipInicial;        // Dirección en memoria donde comienza la instrucción
 } TInstruccion;
+

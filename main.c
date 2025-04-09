@@ -2,20 +2,16 @@
 #include <stdlib.h>
 #include "MVTipos.h"
 #include "Operaciones.h"
+#include "Funciones.h"
 
-//#define BASE_SEG(x) ((x) >> 16)
-//#define TAM_SEG(x)  ((x) & 0xFFFF)
-//int limiteCodigo = BASE_SEG(mv.TDS[0]) + TAM_SEG(mv.TDS[0]);
-
-void DecodificarInstruccion(char instruccion,char *operando1,char *operando2,char *operacion,int *ErrorFlag);
-TInstruccion LeerInstruccionCompleta(char *memoria, int ip, int *ErrorFlag);
+void DecodificarInstruccion(char instruccion,char *operando1,char *operando2,char *operacion, int *ErrorFlag);
+TInstruccion LeerInstruccionCompleta(TMV *MV, int ip);
 
 int main(int argc, char *argv[]){
 
     FILE *archBinario;
-    TMV mv;
+    TMV MV;
     int modoDisassembler = 0;
-    int ErrorFlag = 0;                                      // Bandera para detectar errores
     TInstruccion InstruccionActual;                         // Para cargar la instruccion act
     unsigned int ipActual;                                  // Instruction Pointer
     unsigned short tamCod;                                  // Para leer el tamanio del codigo
@@ -28,25 +24,26 @@ int main(int argc, char *argv[]){
             modoDisassembler = 1;
         }
     }
+    MV.ErrorFlag = 0;
 
     //Cargo en memoria
     archBinario = fopen("filename.vmx","rb");
     fread(header, sizeof(char), 6, archBinario);            // Obtengo el header (6 bytes)
     fread(&tamCod, sizeof(unsigned short), 1, archBinario); // Leo el tamanio del codigo (2 bytes)
-    mv.TDS[0] = (0 << 16) | tamCod;                         // Segmento de codigo: base = 0, tamanio = tamCod
-    mv.TDS[1] = (tamCod << 16) | (16384 - tamCod);          // Segmento de datos: base = tamCod, tamanio restante
+    MV.TDS[0] = (0 << 16) | tamCod;                         // Segmento de codigo: base = 0, tamanio = tamCod
+    MV.TDS[1] = (tamCod << 16) | (16384 - tamCod);          // Segmento de datos: base = tamCod, tamanio restante
 
-    fread(mv.memoria, sizeof(char), tamCod, archBinario);   // Carga la totalidad del codigo
+    fread(MV.memoria, sizeof(char), tamCod, archBinario);   // Carga la totalidad del codigo
     fclose(archBinario);
-    mv.registros[5] = 0;                                    //PC == 0
+    MV.registros[5] = 0;                                    //PC == 0
 
     //Comienza la ejecucion
-    while (mv.registros[5] < tamCod && !ErrorFlag) {
-        ipActual = mv.registros[5];
+    while (MV.registros[IP] < tamCod && !MV.ErrorFlag){
+        ipActual = MV.registros[5];
 
-        InstruccionActual = LeerInstruccionCompleta(mv.memoria, ipActual, &ErrorFlag);
+        InstruccionActual = LeerInstruccionCompleta(&MV, ipActual);
         if (modoDisassembler) {
-            MostrarInstruccion(InstruccionActual, mv.memoria);
+            MostrarInstruccion(InstruccionActual, MV.memoria);
         }
 
         if (InstruccionActual.codOperacion == 0x0F) { // STOP
@@ -54,13 +51,13 @@ int main(int argc, char *argv[]){
             break;
         }
 
-        mv.registros[5] += InstruccionActual.tamanio;
+        MV.registros[5] += InstruccionActual.tamanio;
     }
 
     return 0;
 }
 
-void DecodificarInstruccion(char instruccion,char *tipoOp1,char *tipoOp2,char *CodOperacion,int *ErrorFlag) {
+void DecodificarInstruccion(char instruccion,char *tipoOp1,char *tipoOp2,char *CodOperacion, int *ErrorFlag) {
     //Como char instruccion lee solo 1 byte
     *CodOperacion = instruccion & 0x1F;  // 5 bits menos significativos
 
@@ -96,14 +93,14 @@ void DecodificarInstruccion(char instruccion,char *tipoOp1,char *tipoOp2,char *C
     }
 }
 
-TInstruccion LeerInstruccionCompleta(char *memoria, int ip, int *ErrorFlag) {
+TInstruccion LeerInstruccionCompleta(TMV *MV, int ip) {
     TInstruccion inst;
     inst.ipInicial = ip;
 
     char tipo1, tipo2;
 
     // 1. Decodificar cabecera
-    DecodificarInstruccion(memoria[ip], &tipo1, &tipo2, &inst.codOperacion, ErrorFlag);
+    DecodificarInstruccion(MV->memoria[ip], &tipo1, &tipo2, &inst.codOperacion, &MV->ErrorFlag);
 
     inst.op1.tipo = tipo1;
     inst.op2.tipo = tipo2;
@@ -114,21 +111,21 @@ TInstruccion LeerInstruccionCompleta(char *memoria, int ip, int *ErrorFlag) {
     // --- OPERANDO B ---
     switch (inst.op2.tipo) {
         case 1: { // registro
-            unsigned char byte = memoria[cursor++];
+            unsigned char byte = MV->memoria[cursor++];
             inst.op2.registro = (byte >> 4) & 0x0F;
             inst.op2.segmentoReg = (byte >> 2) & 0x03;
             break;
         }
         case 2: {// inmediato
-            //inst.op2.valor = memoria[cursor] | (memoria[cursor + 1] << 8);    //little-endian
-            inst.op2.valor = (memoria[cursor] << 8) | memoria[cursor + 1];      //big-endian
+            //inst.op2.valor = MV->memoria[cursor] | (MV->memoria[cursor + 1] << 8);            //little-endian
+            inst.op2.valor = (MV->memoria[cursor] << 8) | MV->memoria[cursor + 1];              //big-endian
             cursor += 2;
             break;
         }
         case 3: {// memoria
-            //inst.op2.desplazamiento = memoria[cursor] | (memoria[cursor + 1] << 8); //little-endian
-            inst.op2.desplazamiento = (memoria[cursor] << 8) | memoria[cursor + 1]; //big-endian
-            unsigned char byte = memoria[cursor + 2];
+            //inst.op2.desplazamiento = MV->memoria[cursor] | (MV->memoria[cursor + 1] << 8);   //little-endian
+            inst.op2.desplazamiento = (MV->memoria[cursor] << 8) | MV->memoria[cursor + 1];     //big-endian
+            unsigned char byte = MV->memoria[cursor + 2];
             inst.op2.registro = (byte >> 4) & 0x0F;
             cursor += 3;
             break;
@@ -138,21 +135,21 @@ TInstruccion LeerInstruccionCompleta(char *memoria, int ip, int *ErrorFlag) {
     // --- OPERANDO A ---
     switch (inst.op1.tipo) {
         case 1: {
-            unsigned char byte = memoria[cursor++];
+            unsigned char byte = MV->memoria[cursor++];
             inst.op1.registro = (byte >> 4) & 0x0F;
             inst.op1.segmentoReg = (byte >> 2) & 0x03;
             break;
         }
         case 2: {
-            //inst.op1.valor = memoria[cursor] | (memoria[cursor + 1] << 8);            //little-endian
-            inst.op1.valor = (memoria[cursor] << 8) | memoria[cursor + 1];              //big-endian
+            //inst.op1.valor = MV->memoria[cursor] | (MV->memoria[cursor + 1] << 8);            //little-endian
+            inst.op1.valor = (MV->memoria[cursor] << 8) | MV->memoria[cursor + 1];              //big-endian
             cursor += 2;
             break;
         }
         case 3: {
-            //inst.op1.desplazamiento = memoria[cursor] | (memoria[cursor + 1] << 8);   //little-endian
-            inst.op1.desplazamiento = (memoria[cursor] << 8) | memoria[cursor + 1];     //big-endian
-            unsigned char byte = memoria[cursor + 2];
+            //inst.op1.desplazamiento = MV->memoria[cursor] | (MV->memoria[cursor + 1] << 8);   //little-endian
+            inst.op1.desplazamiento = (MV->memoria[cursor] << 8) | MV->memoria[cursor + 1];     //big-endian
+            unsigned char byte = MV->memoria[cursor + 2];
             inst.op1.registro = (byte >> 4) & 0x0F;
             cursor += 3;
             break;

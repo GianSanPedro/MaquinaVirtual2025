@@ -1,16 +1,5 @@
 #include <stdio.h>
 #include "MVTipos.h"
-#define CS  0
-#define DS  1
-#define IP  5
-#define CC  8
-#define AC  9
-#define EAX  10
-#define EBX  11
-#define ECX  12
-#define EDX  13
-#define EEX  14
-#define EFX  15
 
 const char *mnemonicos[] = {
     "SYS", "JMP", "JZ", "JP", "JN", "JNZ", "JNP", "JNN", "NOT", "", "", "", "", "", "", "STOP",
@@ -111,15 +100,15 @@ void MostrarOperando(TOperando op) {
 }
 
 void MostrarInstruccion(TInstruccion inst, char *memoria) {
-    // Direcci髇 IP en hexadecimal (4 d韌itos)
+    // Direcci贸n IP en hexadecimal (4 d铆gitos)
     printf("[%.4X] ", inst.ipInicial);
 
-    // Mostrar instrucci髇 en hexa, byte por byte
+    // Mostrar instrucci贸n en hexa, byte por byte
     for (int i = 0; i < inst.tamanio; i++) {
         printf("%.2X ", (unsigned char)memoria[inst.ipInicial + i]);
     }
 
-    // Rellenar espacio si la instrucci髇 es corta (para alinear el pipe |)
+    // Rellenar espacio si la instrucci贸n es corta (para alinear el pipe |)
     for (int i = inst.tamanio; i < 6; i++) {
         printf("   ");
     }
@@ -142,3 +131,43 @@ void MostrarInstruccion(TInstruccion inst, char *memoria) {
     printf("\n");
 }
 
+void procesarInstruccion(TMV *mv, TInstruccion inst) {
+    switch (inst.codOperacion) {
+        // Instrucciones de 2 operandos
+        case 0x10: MOV(mv, inst.op1, inst.op2); break;
+        case 0x11: ADD(mv, inst.op1, inst.op2); break;
+        case 0x12: SUB(mv, inst.op1, inst.op2); break;
+        case 0x13: SWAP(mv, inst.op1, inst.op2); break;
+        case 0x14: MUL(mv, inst.op1, inst.op2); break;
+        case 0x15: DIV(mv, inst.op1, inst.op2); break;
+        case 0x16: CMP(mv, inst.op1, inst.op2); break;
+        case 0x17: SHL(mv, inst.op1, inst.op2); break;
+        case 0x18: SHR(mv, inst.op1, inst.op2); break;
+        case 0x19: AND(mv, inst.op1, inst.op2); break;
+        case 0x1A: OR(mv, inst.op1, inst.op2); break;
+        case 0x1B: XOR(mv, inst.op1, inst.op2); break;
+
+        // Instrucciones de 1 operando
+        case 0x00: SYS(mv, inst.op1); break;
+        case 0x08: NOT(mv, inst.op1); break;
+        case 0x1C: LDL(mv, inst.op1); break;
+        case 0x1D: LDH(mv, inst.op1); break;
+        case 0x1E: RND(mv, inst.op1); break;
+
+        // Saltos (usan op1.valor como destino)
+        case 0x01: JMP(mv, inst.op1.valor); break;
+        case 0x02: JZ(mv, inst.op1.valor); break;
+        case 0x03: JP(mv, inst.op1.valor); break;
+        case 0x04: JN(mv, inst.op1.valor); break;
+        case 0x05: JNZ(mv, inst.op1.valor); break;
+        case 0x06: JNP(mv, inst.op1.valor); break;
+        case 0x07: JNN(mv, inst.op1.valor); break;
+
+        // Instrucci贸n sin operandos
+        //case 0x0F: STOP(mv); break;
+
+        default:
+            printf("鈿狅笍  Instrucci贸n no implementada: 0x%02X\n", inst.codOperacion);
+            break;
+    }
+}
