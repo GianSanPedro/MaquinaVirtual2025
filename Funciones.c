@@ -60,15 +60,15 @@ void escribirValor(TMV *mv, TOperando op, int valor) {
 }
 
 void leerDesdeTeclado(TMV *mv) {
-    int base = mv->registros[EDX] >> 16;
+    int base   = mv->registros[EDX] >> 16;
     int offset = mv->registros[EDX] & 0xFFFF;
 
-    int ecx = mv->registros[ECX];
-    int cant = ecx & 0xFF;            // CL (bits 0–7)
-    int tam  = (ecx >> 8) & 0xFF;     // CH (bits 8–15)
+    int ecx  = mv->registros[ECX];
+    int cant = ecx & 0xFF;           // CL
+    int tam  = (ecx >> 8) & 0xFF;    // CH
 
-    int eax = mv->registros[EAX];
-    int modo = eax & 0xFF;            // AL (bits 0–7)
+    int eax  = mv->registros[EAX];
+    int modo = eax & 0xFF;           // AL
 
     for (int i = 0; i < cant; i++) {
         int direccion = base + offset + i * tam;
@@ -77,56 +77,70 @@ void leerDesdeTeclado(TMV *mv) {
         printf("[%.4X]: ", direccion);
 
         if (modo & 0x10 || modo & 0x01) {
-            scanf("%d", &valor);  // binario o decimal
+            scanf("%d", &valor);
         } else if (modo & 0x08) {
-            scanf("%x", &valor);  // hexadecimal
+            scanf("%x", &valor);
         } else if (modo & 0x04) {
-            scanf("%o", &valor);  // octal
+            scanf("%o", &valor);
         } else if (modo & 0x02) {
             char c;
-            scanf(" %c", &c);     // ASCII
+            scanf(" %c", &c);
             valor = c;
         }
 
-        // Guardar siempre como 4 bytes (estándar)
-        mv->memoria[direccion]     = (valor >> 24) & 0xFF;
-        mv->memoria[direccion + 1] = (valor >> 16) & 0xFF;
-        mv->memoria[direccion + 2] = (valor >> 8)  & 0xFF;
-        mv->memoria[direccion + 3] = valor & 0xFF;
+        // Escribir segun tamaño
+        if (tam == 1) {
+            mv->memoria[direccion] = valor & 0xFF;
+        } else if (tam == 2) {
+            mv->memoria[direccion]     = (valor >> 8) & 0xFF;
+            mv->memoria[direccion + 1] = valor & 0xFF;
+        } else if (tam == 4) {
+            mv->memoria[direccion]     = (valor >> 24) & 0xFF;
+            mv->memoria[direccion + 1] = (valor >> 16) & 0xFF;
+            mv->memoria[direccion + 2] = (valor >> 8) & 0xFF;
+            mv->memoria[direccion + 3] = valor & 0xFF;
+        }
     }
 }
 
 void escribirEnPantalla(TMV *mv) {
-    int base = mv->registros[EDX] >> 16;
+    int base   = mv->registros[EDX] >> 16;
     int offset = mv->registros[EDX] & 0xFFFF;
 
-    int ecx = mv->registros[ECX];
-    int cant = ecx & 0xFF;            // CL
-    int tam  = (ecx >> 8) & 0xFF;     // CH
+    int ecx  = mv->registros[ECX];
+    int cant = ecx & 0xFF;           // CL
+    int tam  = (ecx >> 8) & 0xFF;    // CH
 
-    int eax = mv->registros[EAX];
-    int modo = eax & 0xFF;            // AL
+    int eax  = mv->registros[EAX];
+    int modo = eax & 0xFF;           // AL
 
     for (int i = 0; i < cant; i++) {
         int direccion = base + offset + i * tam;
-
         int valor = 0;
-        valor |= mv->memoria[direccion] << 24;
-        valor |= mv->memoria[direccion + 1] << 16;
-        valor |= mv->memoria[direccion + 2] << 8;
-        valor |= mv->memoria[direccion + 3];
+
+        if (tam == 1) {
+            valor = mv->memoria[direccion];
+        } else if (tam == 2) {
+            valor = (mv->memoria[direccion] << 8) |
+                    mv->memoria[direccion + 1];
+        } else if (tam == 4) {
+            valor = (mv->memoria[direccion] << 24) |
+                    (mv->memoria[direccion + 1] << 16) |
+                    (mv->memoria[direccion + 2] << 8) |
+                    mv->memoria[direccion + 3];
+        }
 
         printf("[%.4X]: ", direccion);
 
         if (modo & 0x10 || modo & 0x01) {
-            printf("%d", valor);          // binario o decimal
+            printf("%d", valor);
         } else if (modo & 0x08) {
-            printf("0x%X", valor);        // hexadecimal
+            printf("0x%X", valor);
         } else if (modo & 0x04) {
-            printf("0o%o", valor);        // octal
+            printf("0o%o", valor);
         } else if (modo & 0x02) {
             if (valor >= 32 && valor <= 126)
-                printf("%c", valor);      // ASCII imprimible
+                printf("%c", valor);
             else
                 printf(".");
         }
