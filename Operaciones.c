@@ -155,13 +155,13 @@ void procesarInstruccion(TMV *mv, TInstruccion inst) {
         case 0x1E: RND(mv, inst.op1); break;
 
         // Saltos (usan op1.valor como destino)
-        case 0x01: JMP(mv, inst.op1.valor); break;
-        case 0x02: JZ(mv, inst.op1.valor); break;
-        case 0x03: JP(mv, inst.op1.valor); break;
-        case 0x04: JN(mv, inst.op1.valor); break;
-        case 0x05: JNZ(mv, inst.op1.valor); break;
-        case 0x06: JNP(mv, inst.op1.valor); break;
-        case 0x07: JNN(mv, inst.op1.valor); break;
+        case 0x01: JMP(mv, inst.op1); break;
+        case 0x02: JZ(mv, inst.op1); break;
+        case 0x03: JP(mv, inst.op1); break;
+        case 0x04: JN(mv, inst.op1); break;
+        case 0x05: JNZ(mv, inst.op1); break;
+        case 0x06: JNP(mv, inst.op1); break;
+        case 0x07: JNN(mv, inst.op1); break;
 
         // Instrucción sin operandos
         //case 0x0F: STOP(mv); break;

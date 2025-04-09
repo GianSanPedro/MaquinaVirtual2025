@@ -38,22 +38,31 @@ int main(int argc, char *argv[]){
     MV.registros[5] = 0;                                    //PC == 0
 
     //Comienza la ejecucion
-    while (MV.registros[IP] < tamCod && !MV.ErrorFlag){
-        ipActual = MV.registros[5];
+    while (MV.registros[IP] < tamCod && !MV.ErrorFlag) {
+        ipActual = MV.registros[IP];
 
+        // Leo la instrucción desde memoria
         InstruccionActual = LeerInstruccionCompleta(&MV, ipActual);
+
+        // Modo desensamblador
         if (modoDisassembler) {
             MostrarInstruccion(InstruccionActual, MV.memoria);
         }
 
-        if (InstruccionActual.codOperacion == 0x0F) { // STOP
+        // Verificar STOP
+        if (InstruccionActual.codOperacion == 0x0F) {
             printf("\n>> Instruccion STOP encontrada. Fin del programa.\n");
             break;
         }
 
-        MV.registros[5] += InstruccionActual.tamanio;
-    }
+        // Ejecutar instruccion
+        //procesarInstruccion(&MV, InstruccionActual);
 
+        // Si no hubo salto, avanzar IP
+        if (MV.registros[IP] == ipActual) {
+            MV.registros[IP] += InstruccionActual.tamanio;
+        }
+    }
     return 0;
 }
 
