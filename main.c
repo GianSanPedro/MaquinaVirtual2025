@@ -93,8 +93,8 @@ void DecodificarInstruccion(char instruccion,char *tipoOp1,char *tipoOp2,char *C
     }
     else if (*CodOperacion >= 0x10 && *CodOperacion <= 0x1E) {
         // Dos operandos
-        *tipoOp2 = (instruccion >> 6) & 0x03;  // bits 7�6 = tipo operando B
-        *tipoOp1 = (instruccion >> 4) & 0x03;  // bits 5�4 = tipo operando A
+        *tipoOp2 = (instruccion >> 6) & 0x03;  // bits 7-6 = tipo operando B
+        *tipoOp1 = (instruccion >> 4) & 0x03;  // bits 5-4 = tipo operando A
 
         // Validacion adicional: solo se permiten tipos A 01 o 11
         // Creo  que es innecesario ya que (0x10 <= CodOperacion <= 0x1E)
@@ -104,7 +104,7 @@ void DecodificarInstruccion(char instruccion,char *tipoOp1,char *tipoOp2,char *C
     }
     else if (*CodOperacion <= 0x08) {
         // Un operando
-        *tipoOp1 = (instruccion >> 6) & 0x03;  // bits 7�6
+        *tipoOp1 = (instruccion >> 6) & 0x03;  // bits 7-6
         *tipoOp2 = 0;
 
         // Validacion: bit 5 debe ser 0 (relleno)

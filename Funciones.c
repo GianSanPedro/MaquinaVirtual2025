@@ -19,8 +19,15 @@ void actualizarNZ(TMV *mv, int resultado) {
 
 int leerValor(TMV *mv, TOperando op) {
     switch (op.tipo) {
-        case 1: // Registro
-            return mv->registros[op.registro];
+        case 1: { // Registro
+            unsigned int valor = mv->registros[op.registro];
+            switch (op.segmentoReg) {
+                case 0: return valor;                              // EAX completo
+                case 1: return valor & 0xFF;                        // AL
+                case 2: return (valor >> 8) & 0xFF;                 // AH
+                case 3: return valor & 0xFFFF;                      // AX
+            }
+        }
 
         case 2: // Inmediato
             return op.valor;
@@ -47,14 +54,33 @@ int leerValor(TMV *mv, TOperando op) {
 void escribirValor(TMV *mv, TOperando op, int valor) {
     // No se escribe en inmediatos ni operandos vacíos
     switch (op.tipo) {
-        case 1: // Registro
-            mv->registros[op.registro] = valor;
+        case 1: { // Registro
+            unsigned int *reg = &mv->registros[op.registro];
+
+            switch (op.segmentoReg) {
+                case 0:                                             // Registro completo (EAX)
+                    *reg = valor;
+                    break;
+
+                case 1:                                             // Byte bajo (AL)
+                    *reg = (*reg & 0xFFFFFF00) | (valor & 0xFF);
+                    break;
+
+                case 2:                                             // Byte alto (AH)
+                    *reg = (*reg & 0xFFFF00FF) | ((valor & 0xFF) << 8);
+                    break;
+
+                case 3:                                             // Palabra baja (AX)
+                    *reg = (*reg & 0xFFFF0000) | (valor & 0xFFFF);
+                    break;
+            }
             break;
+        }
 
         case 3: { // Memoria (acceso lógico)
-            int selector   = mv->registros[op.registro] >> 16;   // selector del segmento (0–7)
-            int offset     = op.desplazamiento;                  // desplazamiento dentro del segmento
-            int base       = mv->TDS[selector] >> 16;            // base física del segmento
+            int selector   = mv->registros[op.registro] >> 16;      // selector del segmento (0–7)
+            int offset     = op.desplazamiento;                     // desplazamiento dentro del segmento
+            int base       = mv->TDS[selector] >> 16;               // base física del segmento
             int direccion  = base + offset;
 
             mv->memoria[direccion]     = (valor >> 24) & 0xFF;
