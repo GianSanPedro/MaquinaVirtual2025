@@ -33,8 +33,12 @@ int main(int argc, char *argv[]){
     fread(header, sizeof(char), 6, archBinario);            // Obtengo el header (6 bytes)
     fread(&tamCod, sizeof(unsigned short), 1, archBinario); // Leo el tamanio del codigo (2 bytes)
 
-    MV.TDS[0] = (0 << 16) | tamCod;                         // Segmento de codigo: base = 0, tamanio = tamCod
-    MV.TDS[1] = (tamCod << 16) | (16384 - tamCod);          // Segmento de datos: base = tamCod, tamanio restante
+    MV.TDS[0] = (0 << 16) | tamCod;                         // Segmento de código: base = 0, tamaño = tamCod
+    MV.TDS[1] = (tamCod << 16) | (16384 - tamCod);          // Segmento de datos: base = tamCod, tamaño restante
+
+    MV.registros[CS] = (0 << 16);                           // CS = 0x00000000 → segmento 0, offset 0
+    MV.registros[DS] = (1 << 16);                           // DS = 0x00010000 → segmento 1, offset 0
+    MV.registros[IP] = MV.registros[CS];                    // IP apunta a inicio del segmento de código
 
     fread(MV.memoria, sizeof(char), tamCod, archBinario);   // Carga la totalidad del codigo
     fclose(archBinario);
@@ -56,7 +60,7 @@ int main(int argc, char *argv[]){
     }
 
     // Reiniciar el Instruction Pointer después de recorrer
-    MV.registros[IP] = 0;
+    MV.registros[IP] = MV.registros[CS];
 
     //Comienza la ejecucion
     while (MV.registros[IP] < tamCod && !MV.ErrorFlag) {

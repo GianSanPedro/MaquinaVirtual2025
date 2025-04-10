@@ -25,31 +25,38 @@ int leerValor(TMV *mv, TOperando op) {
         case 2: // Inmediato
             return op.valor;
 
-        case 3: { // Memoria
-            int base = mv->TDS[op.registro] >> 16;
-            int direccion = base + op.desplazamiento;
+        case 3: { // Memoria (acceso lógico)
+            int selector  = mv->registros[op.registro] >> 16;    // selector del segmento (0–7)
+            int offset    = op.desplazamiento;                   // desplazamiento dentro del segmento
+            int base      = mv->TDS[selector] >> 16;             // base física del segmento
+            int direccion = base + offset;
+
             int val = 0;
-            val |= mv->memoria[direccion] << 24;
+            val |= mv->memoria[direccion]     << 24;
             val |= mv->memoria[direccion + 1] << 16;
             val |= mv->memoria[direccion + 2] << 8;
             val |= mv->memoria[direccion + 3];
             return val;
         }
+
         default:
             return 0;
     }
 }
 
 void escribirValor(TMV *mv, TOperando op, int valor) {
-    // No se escribe en inmediatos ni operandos vacios
+    // No se escribe en inmediatos ni operandos vacíos
     switch (op.tipo) {
         case 1: // Registro
             mv->registros[op.registro] = valor;
             break;
 
-        case 3: { // Memoria
-            int base = mv->TDS[op.registro] >> 16;
-            int direccion = base + op.desplazamiento;
+        case 3: { // Memoria (acceso lógico)
+            int selector   = mv->registros[op.registro] >> 16;   // selector del segmento (0–7)
+            int offset     = op.desplazamiento;                  // desplazamiento dentro del segmento
+            int base       = mv->TDS[selector] >> 16;            // base física del segmento
+            int direccion  = base + offset;
+
             mv->memoria[direccion]     = (valor >> 24) & 0xFF;
             mv->memoria[direccion + 1] = (valor >> 16) & 0xFF;
             mv->memoria[direccion + 2] = (valor >> 8)  & 0xFF;
@@ -60,15 +67,17 @@ void escribirValor(TMV *mv, TOperando op, int valor) {
 }
 
 void leerDesdeTeclado(TMV *mv) {
-    int base   = mv->registros[EDX] >> 16;
-    int offset = mv->registros[EDX] & 0xFFFF;
+    // Obtener selector y offset desde el registro EDX
+    int selector = mv->registros[EDX] >> 16;       // índice de la TDS
+    int offset   = mv->registros[EDX] & 0xFFFF;    // offset dentro del segmento
+    int base     = mv->TDS[selector] >> 16;        // base física real del segmento
 
     int ecx  = mv->registros[ECX];
-    int cant = ecx & 0xFF;           // CL
-    int tam  = (ecx >> 8) & 0xFF;    // CH
+    int cant = ecx & 0xFF;                         // CL: cantidad de elementos
+    int tam  = (ecx >> 8) & 0xFF;                  // CH: tamaño de cada elemento
 
     int eax  = mv->registros[EAX];
-    int modo = eax & 0xFF;           // AL
+    int modo = eax & 0xFF;                         // AL: modo de lectura
 
     for (int i = 0; i < cant; i++) {
         int direccion = base + offset + i * tam;
@@ -88,7 +97,7 @@ void leerDesdeTeclado(TMV *mv) {
             valor = c;
         }
 
-        // Escribir segun tamaño
+        // Escribir en memoria según tamaño
         if (tam == 1) {
             mv->memoria[direccion] = valor & 0xFF;
         } else if (tam == 2) {
@@ -97,22 +106,24 @@ void leerDesdeTeclado(TMV *mv) {
         } else if (tam == 4) {
             mv->memoria[direccion]     = (valor >> 24) & 0xFF;
             mv->memoria[direccion + 1] = (valor >> 16) & 0xFF;
-            mv->memoria[direccion + 2] = (valor >> 8) & 0xFF;
+            mv->memoria[direccion + 2] = (valor >> 8)  & 0xFF;
             mv->memoria[direccion + 3] = valor & 0xFF;
         }
     }
 }
 
 void escribirEnPantalla(TMV *mv) {
-    int base   = mv->registros[EDX] >> 16;
-    int offset = mv->registros[EDX] & 0xFFFF;
+    // Extraer selector y offset desde EDX
+    int selector = mv->registros[EDX] >> 16;         // índice del segmento
+    int offset   = mv->registros[EDX] & 0xFFFF;      // desplazamiento dentro del segmento
+    int base     = mv->TDS[selector] >> 16;          // base física del segmento
 
     int ecx  = mv->registros[ECX];
-    int cant = ecx & 0xFF;           // CL
-    int tam  = (ecx >> 8) & 0xFF;    // CH
+    int cant = ecx & 0xFF;           // CL = cantidad
+    int tam  = (ecx >> 8) & 0xFF;    // CH = tamaño por celda
 
     int eax  = mv->registros[EAX];
-    int modo = eax & 0xFF;           // AL
+    int modo = eax & 0xFF;           // AL = modo de impresión
 
     for (int i = 0; i < cant; i++) {
         int direccion = base + offset + i * tam;
