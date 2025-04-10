@@ -18,24 +18,49 @@ int main(int argc, char *argv[]){
     char *header =(char *)malloc(sizeof(char) * 6);         // 0 - 4 Identificador "VMX25"
                                                             // 5 Version "1"
                                                             // 6 - 7 Tamanio del codigo
-    // Revisar si se paso el parametro -d
+
+    // MODO DISASSEMBLER
+    TInstruccion *instruccionesGuardadas = NULL;
+    int cantidadInstrucciones = 0;
+    int capacidadInstrucciones = 128;
+
     for (int i = 1; i < argc; i++) {                        //argc (argument count)
         if (strcmp(argv[i], "-d") == 0) {                   //argv[] (argument vector)
             modoDisassembler = 1;
         }
     }
+
     MV.ErrorFlag = 0;
 
-    //Cargo en memoria
+    // Cargo en memoria
     archBinario = fopen("filename.vmx","rb");
     fread(header, sizeof(char), 6, archBinario);            // Obtengo el header (6 bytes)
     fread(&tamCod, sizeof(unsigned short), 1, archBinario); // Leo el tamanio del codigo (2 bytes)
+
     MV.TDS[0] = (0 << 16) | tamCod;                         // Segmento de codigo: base = 0, tamanio = tamCod
     MV.TDS[1] = (tamCod << 16) | (16384 - tamCod);          // Segmento de datos: base = tamCod, tamanio restante
 
     fread(MV.memoria, sizeof(char), tamCod, archBinario);   // Carga la totalidad del codigo
     fclose(archBinario);
-    MV.registros[5] = 0;                                    //PC == 0
+
+    // Imprimo Disassembler
+    if (modoDisassembler) {
+        printf("\n>> Codigo assembler cargado en memoria:\n");
+        int ipTemp = 0;
+        int Band = 0;
+        while (ipTemp < tamCod && !Band) {
+            TInstruccion inst = LeerInstruccionCompleta(&MV, ipTemp);
+            MostrarInstruccion(inst, MV.memoria);
+            if (inst.codOperacion == 0x0F) {
+                Band = 1;
+            }
+            ipTemp += inst.tamanio;
+        }
+        printf("\n");
+    }
+
+    // Reiniciar el Instruction Pointer después de recorrer
+    MV.registros[IP] = 0;
 
     //Comienza la ejecucion
     while (MV.registros[IP] < tamCod && !MV.ErrorFlag) {
@@ -44,25 +69,16 @@ int main(int argc, char *argv[]){
         // Leo la instrucción desde memoria
         InstruccionActual = LeerInstruccionCompleta(&MV, ipActual);
 
-        // Modo desensamblador
-        if (modoDisassembler) {
-            MostrarInstruccion(InstruccionActual, MV.memoria);
-        }
-
-        // Verificar STOP
-        if (InstruccionActual.codOperacion == 0x0F) {
-            printf("\n>> Instruccion STOP encontrada. Fin del programa.\n");
-            break;
-        }
-
         // Ejecutar instruccion
-        //procesarInstruccion(&MV, InstruccionActual);
+        procesarInstruccion(&MV, InstruccionActual);
 
         // Si no hubo salto, avanzar IP
         if (MV.registros[IP] == ipActual) {
             MV.registros[IP] += InstruccionActual.tamanio;
         }
     }
+
+    free(header);
     return 0;
 }
 
