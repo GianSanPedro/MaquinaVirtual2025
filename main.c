@@ -20,10 +20,6 @@ int main(int argc, char *argv[]){
                                                             // 6 - 7 Tamanio del codigo
 
     // MODO DISASSEMBLER
-    TInstruccion *instruccionesGuardadas = NULL;
-    int cantidadInstrucciones = 0;
-    int capacidadInstrucciones = 128;
-
     for (int i = 1; i < argc; i++) {                        //argc (argument count)
         if (strcmp(argv[i], "-d") == 0) {                   //argv[] (argument vector)
             modoDisassembler = 1;
