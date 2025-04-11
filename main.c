@@ -83,16 +83,19 @@ int main(int argc, char *argv[]){
         // Leo la instrucción desde memoria
         InstruccionActual = LeerInstruccionCompleta(&MV, ipActual);
 
-        // Ejecutar o detectar STOP
-        if (InstruccionActual.codOperacion == 0x0F) {
-            BandStop = 1;
-        } else {
-            procesarInstruccion(&MV, InstruccionActual);
-        }
+        // Verifico que no se haya detectado un error en la decodificacion antes de ejecutar
+        if (!MV.ErrorFlag){
+            // Ejecutar o detectar STOP
+            if (InstruccionActual.codOperacion == 0x0F) {
+                BandStop = 1;
+            } else {
+                procesarInstruccion(&MV, InstruccionActual);
+            }
 
-        // Si no hubo salto, avanzar IP
-        if (MV.registros[IP] == ipActual) {
-            MV.registros[IP] += InstruccionActual.tamanio;
+            // Si no hubo salto, avanzar IP
+            if (MV.registros[IP] == ipActual) {
+                MV.registros[IP] += InstruccionActual.tamanio;
+            }
         }
     }
 
@@ -116,7 +119,6 @@ void DecodificarInstruccion(char instruccion,char *tipoOp1,char *tipoOp2,char *C
         *tipoOp1 = (instruccion >> 4) & 0x03;  // bits 5-4 = tipo operando A
 
         // Validacion adicional: solo se permiten tipos A 01 o 11
-        // Creo  que es innecesario ya que (0x10 <= CodOperacion <= 0x1E)
         if (*tipoOp1 != 0x01 && *tipoOp1 != 0x03) {
             *ErrorFlag = 1; // Tipo de operando A invalido
         }
@@ -146,6 +148,12 @@ TInstruccion LeerInstruccionCompleta(TMV *MV, int ip) {
     // 1. Decodificar cabecera
     DecodificarInstruccion(MV->memoria[ip], &tipo1, &tipo2, &inst.codOperacion, &MV->ErrorFlag);
 
+    // Si hubo un error en la decodificacion, devuelvo la instruccion vacia
+    if (MV->ErrorFlag) {
+        inst.op1.tipo = 0;
+        inst.op2.tipo = 0;
+        return inst;
+    }
     inst.op1.tipo = tipo1;
     inst.op2.tipo = tipo2;
 
@@ -208,15 +216,15 @@ void reportEstado(int estado)
 {
     switch(estado)
     {
-        case 0: printf("\n\nSUCCESSFUL EXECUTION");
+        case 0: printf("\n\n>> EJECUCION EXITOSA");
         break;
-        case 1: printf("\n\nINVALID SEGMENT");
+        case 1: printf("\n\n>> INSTRUCCION INVALIDA");
         break;
-        case 2: printf("\n\nINVALID INSTRUCTION");
+        case 2: printf("\n\n>> FALLO DE SEGMENTO");
         break;
-        case 3: printf("\n\nDIVISION BY ZERO");
+        case 3: printf("\n\n>> DIVISION POR CERO");
         break;
-        default: printf("\n\nUNHANDLED ERROR");
+        default: printf("\n\n>> ERROR DESCONOCIDO");
         break;
    }
 }

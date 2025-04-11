@@ -100,15 +100,15 @@ void MostrarOperando(TOperando op) {
 }
 
 void MostrarInstruccion(TInstruccion inst, char *memoria) {
-    // Dirección IP en hexadecimal (4 dígitos)
+    // Direccion IP en hexadecimal (4 dígitos)
     printf("[%.4X] ", inst.ipInicial);
 
-    // Mostrar instrucción en hexa, byte por byte
+    // Mostrar instruccion en hexa, byte por byte
     for (int i = 0; i < inst.tamanio; i++) {
         printf("%.2X ", (unsigned char)memoria[inst.ipInicial + i]);
     }
 
-    // Rellenar espacio si la instrucción es corta (para alinear el pipe |)
+    // Rellenar espacio si la instruccion es corta, para alinear la barra|
     for (int i = inst.tamanio; i < 6; i++) {
         printf("   ");
     }
@@ -162,16 +162,5 @@ void procesarInstruccion(TMV *mv, TInstruccion inst) {
         case 0x05: JNZ(mv, inst.op1); break;
         case 0x06: JNP(mv, inst.op1); break;
         case 0x07: JNN(mv, inst.op1); break;
-
-        /* Instrucción sin operandos: STOP
-        case 0x0F: {
-            printf("\n>> Instruccion STOP encontrada. Fin del programa.\n");
-            mv->ErrorFlag = 1;
-            break;
-        }
-        */
-        default:
-            printf("⚠️  Instrucción no implementada: 0x%02X\n", inst.codOperacion);
-            break;
     }
 }

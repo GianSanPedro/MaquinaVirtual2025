@@ -320,8 +320,8 @@ void DIV(TMV *mv, TOperando op1, TOperando op2) {
     int divisor   = leerValor(mv, op2);
 
     if (divisor == 0) {
-        printf("Error: Division por cero\n");
-        mv->ErrorFlag = 1;
+        //printf("Error: Division por cero\n");
+        mv->ErrorFlag = 3;
     }
     else{
         int resultado = dividendo / divisor;
