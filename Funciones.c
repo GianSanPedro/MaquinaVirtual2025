@@ -3,6 +3,10 @@
 #include <time.h>
 #include "MVTipos.h"
 
+// En C int son 4 bytes
+//      unsigned shot int 2 bytes
+//      char 1 byte
+
 void actualizarNZ(TMV *mv, int resultado) {
     // Limpiar bits 30 (Z) y 31 (N)
     // 0011...1111 (limpia los 2 bits superiores)
@@ -26,17 +30,43 @@ int leerValor(TMV *mv, TOperando op) {
                 case 1: return valor & 0xFF;                        // AL
                 case 2: return (valor >> 8) & 0xFF;                 // AH
                 case 3: return valor & 0xFFFF;                      // AX
+                default: return 0;
             }
         }
 
         case 2: // Inmediato
             return op.valor;
 
-        case 3: { // Memoria (acceso lógico)
-            int selector  = mv->registros[op.registro] >> 16;    // selector del segmento (0–7)
-            int offset    = op.desplazamiento;                   // desplazamiento dentro del segmento
-            int base      = mv->TDS[selector] >> 16;             // base física del segmento
-            int direccion = base + offset;
+        case 3: { // Memoria (acceso logico)
+            int selector, offset_registro;
+
+            if (op.registro == 0) {
+                // Caso: no se especifico registro base -> usar DS
+                selector = 1;
+                offset_registro = 0;
+            } else {
+                unsigned int contenido = mv->registros[op.registro];
+
+                if (contenido == 0) {
+                    // Registro especificado pero sin inicializar -> fallback a DS
+                    selector = 1;
+                    offset_registro = 0;
+                } else {
+                    selector = contenido >> 16;
+                    offset_registro = contenido & 0xFFFF;
+                }
+            }
+
+            int offset_instruc = op.desplazamiento;   // obtenemos el offset (dentro del segmento) del operando de la instruccion
+            int base = mv->TDS[selector] >> 16;       // obtenemos la base fisica del segmento
+            int direccion = base + offset_registro + offset_instruc;
+
+            // Valido los limites
+            if (direccion < 0 || direccion + 3 >= sizeof(mv->memoria)) {
+                mv->ErrorFlag = 1;
+                //fprintf(stderr, "Error: intento de acceso fuera de memoria en leerValor (direccion = %d)\n", direccion);
+                return 0;
+            }
 
             int val = 0;
             val |= mv->memoria[direccion]     << 24;
@@ -77,11 +107,33 @@ void escribirValor(TMV *mv, TOperando op, int valor) {
             break;
         }
 
-        case 3: { // Memoria (acceso lógico)
-            int selector   = mv->registros[op.registro] >> 16;      // selector del segmento (0–7)
-            int offset     = op.desplazamiento;                     // desplazamiento dentro del segmento
-            int base       = mv->TDS[selector] >> 16;               // base física del segmento
-            int direccion  = base + offset;
+        case 3: { // Memoria (acceso logico)
+            int selector, offset_registro;
+
+            if (op.registro == 0) {
+                // Caso sin registro explícito -> usar DS
+                selector = 1;
+                offset_registro = 0;
+            } else {
+                unsigned int contenido = mv->registros[op.registro];
+                if (contenido == 0) {
+                    selector = 1;
+                    offset_registro = 0;
+                } else {
+                    selector = contenido >> 16;
+                    offset_registro = contenido & 0xFFFF;
+                }
+            }
+
+            int offset_instruc = op.desplazamiento;                     // desplazamiento dentro del segmento
+            int base = mv->TDS[selector] >> 16;                         // base fisica del segmento
+            int direccion = base + offset_registro + offset_instruc;
+
+            // Validar límites de escritura
+            if (direccion < 0 || direccion + 3 >= sizeof(mv->memoria)) {
+                mv->ErrorFlag = 1;
+                return;
+            }
 
             mv->memoria[direccion]     = (valor >> 24) & 0xFF;
             mv->memoria[direccion + 1] = (valor >> 16) & 0xFF;
@@ -93,21 +145,36 @@ void escribirValor(TMV *mv, TOperando op, int valor) {
 }
 
 void leerDesdeTeclado(TMV *mv) {
-    // Obtener selector y offset desde el registro EDX
-    int selector = mv->registros[EDX] >> 16;       // índice de la TDS
-    int offset   = mv->registros[EDX] & 0xFFFF;    // offset dentro del segmento
-    int base     = mv->TDS[selector] >> 16;        // base física real del segmento
+    unsigned int edxVal = mv->registros[EDX];
+
+    int selector, offset;
+    if (edxVal == 0) {
+        selector = 1;                           // usar DS por defecto
+        offset = 0;
+    } else {
+        selector = edxVal >> 16;                // índice de la TDS
+        offset   = edxVal & 0xFFFF;             // offset dentro del segmento
+    }
+
+    int base = mv->TDS[selector] >> 16;         // Base física real del segmento
+
 
     int ecx  = mv->registros[ECX];
-    int cant = ecx & 0xFF;                         // CL: cantidad de elementos
-    int tam  = (ecx >> 8) & 0xFF;                  // CH: tamaño de cada elemento
+    int cant = ecx & 0xFF;                      // CL: cantidad de elementos
+    int tam  = (ecx >> 8) & 0xFF;               // CH: tamaño de cada elemento
 
     int eax  = mv->registros[EAX];
-    int modo = eax & 0xFF;                         // AL: modo de lectura
+    int modo = eax & 0xFF;                      // AL
 
     for (int i = 0; i < cant; i++) {
         int direccion = base + offset + i * tam;
         int valor = 0;
+
+        // Validar límites
+        if (direccion < 0 || direccion + tam - 1 >= sizeof(mv->memoria)) {
+            mv->ErrorFlag = 1;
+            return;
+        }
 
         printf("[%.4X]: ", direccion);
 
@@ -123,7 +190,7 @@ void leerDesdeTeclado(TMV *mv) {
             valor = c;
         }
 
-        // Escribir en memoria según tamaño
+        // Escribir en memoria segun tamaño
         if (tam == 1) {
             mv->memoria[direccion] = valor & 0xFF;
         } else if (tam == 2) {
@@ -139,20 +206,35 @@ void leerDesdeTeclado(TMV *mv) {
 }
 
 void escribirEnPantalla(TMV *mv) {
-    // Extraer selector y offset desde EDX
-    int selector = mv->registros[EDX] >> 16;         // índice del segmento
-    int offset   = mv->registros[EDX] & 0xFFFF;      // desplazamiento dentro del segmento
-    int base     = mv->TDS[selector] >> 16;          // base física del segmento
+    unsigned int edxVal = mv->registros[EDX];
+
+    int selector, offset;
+    if (edxVal == 0) {
+        selector = 1;                           // usar DS
+        offset = 0;
+    } else {
+        selector = edxVal >> 16;                // indice del segmento
+        offset   = edxVal & 0xFFFF;             // desplazamiento dentro del segmento
+    }
+
+    int base = mv->TDS[selector] >> 16;         // base fisica del segmento
 
     int ecx  = mv->registros[ECX];
-    int cant = ecx & 0xFF;           // CL = cantidad
-    int tam  = (ecx >> 8) & 0xFF;    // CH = tamaño por celda
+    int cant = ecx & 0xFF;                      // CL: cantidad
+    int tam  = (ecx >> 8) & 0xFF;               // CH: tamaño por celda
 
     int eax  = mv->registros[EAX];
-    int modo = eax & 0xFF;           // AL = modo de impresión
+    int modo = eax & 0xFF;                      // AL: modo de impresion
 
     for (int i = 0; i < cant; i++) {
         int direccion = base + offset + i * tam;
+
+        // Validacion de límites
+        if (direccion < 0 || direccion + tam - 1 >= sizeof(mv->memoria)) {
+            mv->ErrorFlag = 1;
+            return;
+        }
+
         int valor = 0;
 
         if (tam == 1) {
@@ -161,9 +243,9 @@ void escribirEnPantalla(TMV *mv) {
             valor = (mv->memoria[direccion] << 8) |
                     mv->memoria[direccion + 1];
         } else if (tam == 4) {
-            valor = (mv->memoria[direccion] << 24) |
+            valor = (mv->memoria[direccion]     << 24) |
                     (mv->memoria[direccion + 1] << 16) |
-                    (mv->memoria[direccion + 2] << 8) |
+                    (mv->memoria[direccion + 2] << 8)  |
                     mv->memoria[direccion + 3];
         }
 
@@ -186,8 +268,9 @@ void escribirEnPantalla(TMV *mv) {
     }
 }
 
+
 void MOV(TMV *mv, TOperando op1, TOperando op2) {
-    // asumiendo que cualquier acceso a memoria es valido
+    // Asumiendo que cualquier acceso a memoria es valido, no hice las validaciones aun
     int valor = leerValor(mv, op2);
     escribirValor(mv, op1, valor);
 }
