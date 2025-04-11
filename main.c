@@ -31,7 +31,7 @@ int main(int argc, char *argv[]){
         }
     }
     if (nombreArchivo == NULL) {
-        fprintf(stderr, "Error: debe especificar el archivo .vmx a ejecutar.\n");
+        fprintf(stderr, ">> Error: debe especificar el archivo .vmx a ejecutar.\n");
         fprintf(stderr, "Uso: %s [-d] archivo.vmx\n", argv[0]);
         return 1;
     }
@@ -41,7 +41,7 @@ int main(int argc, char *argv[]){
     // Cargo en memoria
     archBinario = fopen(nombreArchivo, "rb");
     if (!archBinario) {
-        fprintf(stderr, "Error: no se pudo abrir el archivo '%s'\n", nombreArchivo);
+        fprintf(stderr, ">> Error: no se pudo abrir el archivo '%s'\n", nombreArchivo);
         return 1;
     }
     fread(header, sizeof(char), 6, archBinario);            // Obtengo el header (6 bytes)
@@ -121,6 +121,7 @@ void DecodificarInstruccion(char instruccion,char *tipoOp1,char *tipoOp2,char *C
         // Validacion adicional: solo se permiten tipos A 01 o 11
         if (*tipoOp1 != 0x01 && *tipoOp1 != 0x03) {
             *ErrorFlag = 1; // Tipo de operando A invalido
+            printf("\n>> Tipo de operando A invalido\n");
         }
     }
     else if (*CodOperacion <= 0x08) {
@@ -131,6 +132,7 @@ void DecodificarInstruccion(char instruccion,char *tipoOp1,char *tipoOp2,char *C
         // Validacion: bit 5 debe ser 0 (relleno)
         if (((instruccion >> 5) & 0x01) != 0) {
             *ErrorFlag = 1;
+            printf("\n>> El bit 5 de la instruccion debe ser 0 (relleno)\n");
         }
     }
     else {

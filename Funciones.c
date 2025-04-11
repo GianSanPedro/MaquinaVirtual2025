@@ -3,8 +3,9 @@
 #include <time.h>
 #include "MVTipos.h"
 
+
 // En C int son 4 bytes
-//      unsigned shot int 2 bytes
+//      short int 2 bytes
 //      char 1 byte
 
 void actualizarNZ(TMV *mv, int resultado) {
@@ -22,6 +23,8 @@ void actualizarNZ(TMV *mv, int resultado) {
 }
 
 int leerValor(TMV *mv, TOperando op) {
+    if (mv->ErrorFlag) return 1;
+
     switch (op.tipo) {
         case 1: { // Registro
             unsigned int valor = mv->registros[op.registro];
@@ -37,7 +40,7 @@ int leerValor(TMV *mv, TOperando op) {
         case 2: // Inmediato
             return op.valor;
 
-        case 3: { // Memoria (acceso logico)
+        case 3: { // Memoria siempre 4 bytes (acceso logico)
             int selector, offset_registro;
 
             if (op.registro == 0) {
@@ -61,28 +64,24 @@ int leerValor(TMV *mv, TOperando op) {
             int base = mv->TDS[selector] >> 16;       // obtenemos la base fisica del segmento
             int direccion = base + offset_registro + offset_instruc;
 
-            // Valido los limites
-            if (direccion < 0 || direccion + 3 >= sizeof(mv->memoria)) {
-                mv->ErrorFlag = 1;
-                //fprintf(stderr, "Error: intento de acceso fuera de memoria en leerValor (direccion = %d)\n", direccion);
-                return 0;
+            if (esDireccionValida(mv, selector, direccion, 4)) {
+                int val = 0;
+                val |= mv->memoria[direccion]     << 24;
+                val |= mv->memoria[direccion + 1] << 16;
+                val |= mv->memoria[direccion + 2] << 8;
+                val |= mv->memoria[direccion + 3];
+                return val;
             }
-
-            int val = 0;
-            val |= mv->memoria[direccion]     << 24;
-            val |= mv->memoria[direccion + 1] << 16;
-            val |= mv->memoria[direccion + 2] << 8;
-            val |= mv->memoria[direccion + 3];
-            return val;
+            else
+                return 0;
         }
-
-        default:
-            return 0;
     }
 }
 
 void escribirValor(TMV *mv, TOperando op, int valor) {
-    // No se escribe en inmediatos ni operandos vacíos
+    if (mv->ErrorFlag) return;
+
+    // No se escribe en inmediatos ni operandos vacios
     switch (op.tipo) {
         case 1: { // Registro
             unsigned int *reg = &mv->registros[op.registro];
@@ -111,7 +110,7 @@ void escribirValor(TMV *mv, TOperando op, int valor) {
             int selector, offset_registro;
 
             if (op.registro == 0) {
-                // Caso sin registro explícito -> usar DS
+                // Caso sin registro explicito -> usar DS
                 selector = 1;
                 offset_registro = 0;
             } else {
@@ -129,22 +128,19 @@ void escribirValor(TMV *mv, TOperando op, int valor) {
             int base = mv->TDS[selector] >> 16;                         // base fisica del segmento
             int direccion = base + offset_registro + offset_instruc;
 
-            // Validar límites de escritura
-            if (direccion < 0 || direccion + 3 >= sizeof(mv->memoria)) {
-                mv->ErrorFlag = 1;
-                return;
+            // Valido los limites de escritura
+            if (esDireccionValida(mv, selector, direccion, 4)) {
+                mv->memoria[direccion]     = (valor >> 24) & 0xFF;
+                mv->memoria[direccion + 1] = (valor >> 16) & 0xFF;
+                mv->memoria[direccion + 2] = (valor >> 8)  & 0xFF;
+                mv->memoria[direccion + 3] = valor & 0xFF;
             }
-
-            mv->memoria[direccion]     = (valor >> 24) & 0xFF;
-            mv->memoria[direccion + 1] = (valor >> 16) & 0xFF;
-            mv->memoria[direccion + 2] = (valor >> 8)  & 0xFF;
-            mv->memoria[direccion + 3] = valor & 0xFF;
-            break;
         }
     }
 }
 
 void leerDesdeTeclado(TMV *mv) {
+    if (mv->ErrorFlag) return;
     unsigned int edxVal = mv->registros[EDX];
 
     int selector, offset;
@@ -170,42 +166,39 @@ void leerDesdeTeclado(TMV *mv) {
         int direccion = base + offset + i * tam;
         int valor = 0;
 
-        // Validar límites
-        if (direccion < 0 || direccion + tam - 1 >= sizeof(mv->memoria)) {
-            mv->ErrorFlag = 1;
-            return;
-        }
+        // Valido los limites de escritura
+        if (esDireccionValida(mv, selector, direccion, tam)) {
+            printf("[%.4X]: ", direccion);
+            if (modo & 0x10 || modo & 0x01) {
+                scanf("%d", &valor);
+            } else if (modo & 0x08) {
+                scanf("%x", &valor);
+            } else if (modo & 0x04) {
+                scanf("%o", &valor);
+            } else if (modo & 0x02) {
+                char c;
+                scanf(" %c", &c);
+                valor = c;
+            }
 
-        printf("[%.4X]: ", direccion);
-
-        if (modo & 0x10 || modo & 0x01) {
-            scanf("%d", &valor);
-        } else if (modo & 0x08) {
-            scanf("%x", &valor);
-        } else if (modo & 0x04) {
-            scanf("%o", &valor);
-        } else if (modo & 0x02) {
-            char c;
-            scanf(" %c", &c);
-            valor = c;
-        }
-
-        // Escribir en memoria segun tamaño
-        if (tam == 1) {
-            mv->memoria[direccion] = valor & 0xFF;
-        } else if (tam == 2) {
-            mv->memoria[direccion]     = (valor >> 8) & 0xFF;
-            mv->memoria[direccion + 1] = valor & 0xFF;
-        } else if (tam == 4) {
-            mv->memoria[direccion]     = (valor >> 24) & 0xFF;
-            mv->memoria[direccion + 1] = (valor >> 16) & 0xFF;
-            mv->memoria[direccion + 2] = (valor >> 8)  & 0xFF;
-            mv->memoria[direccion + 3] = valor & 0xFF;
+            // Escribir en memoria segun tamaño
+            if (tam == 1) {
+                mv->memoria[direccion] = valor & 0xFF;
+            } else if (tam == 2) {
+                mv->memoria[direccion]     = (valor >> 8) & 0xFF;
+                mv->memoria[direccion + 1] = valor & 0xFF;
+            } else if (tam == 4) {
+                mv->memoria[direccion]     = (valor >> 24) & 0xFF;
+                mv->memoria[direccion + 1] = (valor >> 16) & 0xFF;
+                mv->memoria[direccion + 2] = (valor >> 8)  & 0xFF;
+                mv->memoria[direccion + 3] = valor & 0xFF;
+            }
         }
     }
 }
 
 void escribirEnPantalla(TMV *mv) {
+    if (mv->ErrorFlag) return;
     unsigned int edxVal = mv->registros[EDX];
 
     int selector, offset;
@@ -228,48 +221,64 @@ void escribirEnPantalla(TMV *mv) {
 
     for (int i = 0; i < cant; i++) {
         int direccion = base + offset + i * tam;
-
-        // Validacion de límites
-        if (direccion < 0 || direccion + tam - 1 >= sizeof(mv->memoria)) {
-            mv->ErrorFlag = 1;
-            return;
-        }
-
         int valor = 0;
 
-        if (tam == 1) {
+        if (esDireccionValida(mv, selector, direccion, tam)) {
+            if (tam == 1) {
             valor = mv->memoria[direccion];
-        } else if (tam == 2) {
-            valor = (mv->memoria[direccion] << 8) |
-                    mv->memoria[direccion + 1];
-        } else if (tam == 4) {
-            valor = (mv->memoria[direccion]     << 24) |
-                    (mv->memoria[direccion + 1] << 16) |
-                    (mv->memoria[direccion + 2] << 8)  |
-                    mv->memoria[direccion + 3];
+            } else if (tam == 2) {
+                valor = (mv->memoria[direccion] << 8) |
+                        mv->memoria[direccion + 1];
+            } else if (tam == 4) {
+                valor = (mv->memoria[direccion]     << 24) |
+                        (mv->memoria[direccion + 1] << 16) |
+                        (mv->memoria[direccion + 2] << 8)  |
+                        mv->memoria[direccion + 3];
+            }
+
+            printf("[%.4X]: ", direccion);
+
+            if (modo & 0x10 || modo & 0x01) {
+                printf("%d", valor);
+            } else if (modo & 0x08) {
+                printf("0x%X", valor);
+            } else if (modo & 0x04) {
+                printf("0o%o", valor);
+            } else if (modo & 0x02) {
+                if (valor >= 32 && valor <= 126)
+                    printf("%c", valor);
+                else
+                    printf(".");
+            }
+
+            printf("\n");
         }
-
-        printf("[%.4X]: ", direccion);
-
-        if (modo & 0x10 || modo & 0x01) {
-            printf("%d", valor);
-        } else if (modo & 0x08) {
-            printf("0x%X", valor);
-        } else if (modo & 0x04) {
-            printf("0o%o", valor);
-        } else if (modo & 0x02) {
-            if (valor >= 32 && valor <= 126)
-                printf("%c", valor);
-            else
-                printf(".");
-        }
-
-        printf("\n");
     }
 }
 
+int esDireccionValida(TMV *mv, int selector, int direccion, int tam) {
+    int base     = mv->TDS[selector] >> 16;
+    int tamanio  = mv->TDS[selector] & 0xFFFF;
+
+    // Validacion del segmento
+    if (direccion < base || direccion + tam - 1 >= base + tamanio) {
+        mv->ErrorFlag = 2;
+        printf(">> ❌ Fallo de segmento: dirección %d fuera de segmento %d (base %d, tamaño %d)\n",
+               direccion, selector, base, tamanio);
+        return 0;
+    }
+
+    // Validacion de la memoria real
+    if (direccion + tam - 1 >= sizeof(mv->memoria)) {
+        mv->ErrorFlag = 2;
+        printf(">> ❌ Acceso fuera de la RAM: dirección %d excede memoria real (16384 bytes)\n", direccion);
+        return 0;
+    }
+
+    return 1; // Direccion valida
+}
+
 void MOV(TMV *mv, TOperando op1, TOperando op2) {
-    // Asumiendo que cualquier acceso a memoria es valido, no hice las validaciones aun
     int valor = leerValor(mv, op2);
     escribirValor(mv, op1, valor);
 }
@@ -320,7 +329,6 @@ void DIV(TMV *mv, TOperando op1, TOperando op2) {
     int divisor   = leerValor(mv, op2);
 
     if (divisor == 0) {
-        //printf("Error: Division por cero\n");
         mv->ErrorFlag = 3;
     }
     else{

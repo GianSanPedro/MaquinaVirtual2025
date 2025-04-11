@@ -8,6 +8,8 @@ void leerDesdeTeclado(TMV *mv);
 
 void escribirEnPantalla(TMV *mv);
 
+int esDireccionValida(TMV *mv, int selector, int direccion, int tam);
+
 void MOV(TMV *mv, TOperando op1, TOperando op2);
 
 void ADD(TMV *mv, TOperando op1, TOperando op2);
