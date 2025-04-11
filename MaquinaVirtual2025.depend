@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1744304349 source:c:\users\gianfranco\documents\proyectos c arquitectura\maquinavirtual2025\main.c
+1744337634 source:c:\users\gianfranco\documents\proyectos c arquitectura\maquinavirtual2025\main.c
 	<stdio.h>
 	<stdlib.h>
 	"MVTipos.h"
@@ -10,11 +10,11 @@
 
 1744252661 c:\users\gianfranco\documents\proyectos c arquitectura\maquinavirtual2025\operaciones.h
 
-1744256314 source:c:\users\gianfranco\documents\proyectos c arquitectura\maquinavirtual2025\operaciones.c
+1744337634 source:c:\users\gianfranco\documents\proyectos c arquitectura\maquinavirtual2025\operaciones.c
 	<stdio.h>
 	"MVTipos.h"
 
-1744333102 source:c:\users\gianfranco\documents\proyectos c arquitectura\maquinavirtual2025\funciones.c
+1744337634 source:c:\users\gianfranco\documents\proyectos c arquitectura\maquinavirtual2025\funciones.c
 	<stdio.h>
 	<stdlib.h>
 	<time.h>

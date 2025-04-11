@@ -268,7 +268,6 @@ void escribirEnPantalla(TMV *mv) {
     }
 }
 
-
 void MOV(TMV *mv, TOperando op1, TOperando op2) {
     // Asumiendo que cualquier acceso a memoria es valido, no hice las validaciones aun
     int valor = leerValor(mv, op2);

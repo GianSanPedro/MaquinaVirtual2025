@@ -6,12 +6,15 @@
 
 void DecodificarInstruccion(char instruccion,char *operando1,char *operando2,char *operacion, int *ErrorFlag);
 TInstruccion LeerInstruccionCompleta(TMV *MV, int ip);
+void reportEstado(int estado);
 
 int main(int argc, char *argv[]){
 
     FILE *archBinario;
     TMV MV;
     int modoDisassembler = 0;
+    int BandStop = 0;
+    char *nombreArchivo = NULL;
     TInstruccion InstruccionActual;                         // Para cargar la instruccion act
     unsigned int ipActual;                                  // Instruction Pointer
     unsigned short tamCod;                                  // Para leer el tamanio del codigo
@@ -23,13 +26,24 @@ int main(int argc, char *argv[]){
     for (int i = 1; i < argc; i++) {                        //argc (argument count)
         if (strcmp(argv[i], "-d") == 0) {                   //argv[] (argument vector)
             modoDisassembler = 1;
+        } else {
+            nombreArchivo = argv[i];                        // El primer argumento que no sea -d es el archivo
         }
+    }
+    if (nombreArchivo == NULL) {
+        fprintf(stderr, "Error: debe especificar el archivo .vmx a ejecutar.\n");
+        fprintf(stderr, "Uso: %s [-d] archivo.vmx\n", argv[0]);
+        return 1;
     }
 
     MV.ErrorFlag = 0;
 
     // Cargo en memoria
-    archBinario = fopen("filename.vmx","rb");
+    archBinario = fopen(nombreArchivo, "rb");
+    if (!archBinario) {
+        fprintf(stderr, "Error: no se pudo abrir el archivo '%s'\n", nombreArchivo);
+        return 1;
+    }
     fread(header, sizeof(char), 6, archBinario);            // Obtengo el header (6 bytes)
     fread(&tamCod, sizeof(unsigned short), 1, archBinario); // Leo el tamanio del codigo (2 bytes)
 
@@ -59,18 +73,22 @@ int main(int argc, char *argv[]){
         printf("\n");
     }
 
-    // Reiniciar el Instruction Pointer después de recorrer
+    // Reiniciar el Instruction Pointer despues de recorrer
     MV.registros[IP] = MV.registros[CS];
 
     //Comienza la ejecucion
-    while (MV.registros[IP] < tamCod && !MV.ErrorFlag) {
+    while (MV.registros[IP] < tamCod && !BandStop && !MV.ErrorFlag) {
         ipActual = MV.registros[IP];
 
         // Leo la instrucción desde memoria
         InstruccionActual = LeerInstruccionCompleta(&MV, ipActual);
 
-        // Ejecutar instruccion
-        procesarInstruccion(&MV, InstruccionActual);
+        // Ejecutar o detectar STOP
+        if (InstruccionActual.codOperacion == 0x0F) {
+            BandStop = 1;
+        } else {
+            procesarInstruccion(&MV, InstruccionActual);
+        }
 
         // Si no hubo salto, avanzar IP
         if (MV.registros[IP] == ipActual) {
@@ -78,6 +96,7 @@ int main(int argc, char *argv[]){
         }
     }
 
+    reportEstado(MV.ErrorFlag);
     free(header);
     return 0;
 }
@@ -185,4 +204,19 @@ TInstruccion LeerInstruccionCompleta(TMV *MV, int ip) {
     return inst;
 }
 
-
+void reportEstado(int estado)
+{
+    switch(estado)
+    {
+        case 0: printf("\n\nSUCCESSFUL EXECUTION");
+        break;
+        case 1: printf("\n\nINVALID SEGMENT");
+        break;
+        case 2: printf("\n\nINVALID INSTRUCTION");
+        break;
+        case 3: printf("\n\nDIVISION BY ZERO");
+        break;
+        default: printf("\n\nUNHANDLED ERROR");
+        break;
+   }
+}

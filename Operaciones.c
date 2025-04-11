@@ -163,13 +163,13 @@ void procesarInstruccion(TMV *mv, TInstruccion inst) {
         case 0x06: JNP(mv, inst.op1); break;
         case 0x07: JNN(mv, inst.op1); break;
 
-        // Instrucción sin operandos: STOP
+        /* Instrucción sin operandos: STOP
         case 0x0F: {
             printf("\n>> Instruccion STOP encontrada. Fin del programa.\n");
             mv->ErrorFlag = 1;
             break;
         }
-
+        */
         default:
             printf("⚠️  Instrucción no implementada: 0x%02X\n", inst.codOperacion);
             break;

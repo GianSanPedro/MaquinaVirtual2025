@@ -2,9 +2,44 @@
 <CodeBlocks_layout_file>
 	<FileVersion major="1" minor="0" />
 	<ActiveTarget name="Debug" />
+	<File name="Funciones.h" open="0" top="0" tabpos="0" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="212" topLine="0" />
+		</Cursor>
+	</File>
+	<File name="main.c" open="1" top="1" tabpos="1" split="0" active="1" splitpos="0" zoom_1="3" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="1264" topLine="54" />
+		</Cursor>
+		<Folding>
+			<Collapse line="103" />
+			<Collapse line="139" />
+		</Folding>
+	</File>
+	<File name="Operaciones.h" open="0" top="0" tabpos="4" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="152" topLine="0" />
+		</Cursor>
+	</File>
+	<File name="MVTipos.h" open="1" top="0" tabpos="3" split="0" active="1" splitpos="0" zoom_1="4" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="221" topLine="5" />
+		</Cursor>
+	</File>
+	<File name="Operaciones.c" open="1" top="0" tabpos="4" split="0" active="1" splitpos="0" zoom_1="2" zoom_2="0">
+		<Cursor>
+			<Cursor1 position="5905" topLine="18" />
+		</Cursor>
+		<Folding>
+			<Collapse line="3" />
+			<Collapse line="8" />
+			<Collapse line="27" />
+			<Collapse line="101" />
+		</Folding>
+	</File>
 	<File name="Funciones.c" open="1" top="0" tabpos="2" split="0" active="1" splitpos="0" zoom_1="3" zoom_2="0">
 		<Cursor>
-			<Cursor1 position="163" topLine="0" />
+			<Cursor1 position="9340" topLine="33" />
 		</Cursor>
 		<Folding>
 			<Collapse line="9" />
@@ -12,65 +47,30 @@
 			<Collapse line="83" />
 			<Collapse line="146" />
 			<Collapse line="207" />
-			<Collapse line="271" />
-			<Collapse line="277" />
-			<Collapse line="288" />
-			<Collapse line="299" />
-			<Collapse line="307" />
-			<Collapse line="318" />
-			<Collapse line="334" />
-			<Collapse line="343" />
-			<Collapse line="354" />
-			<Collapse line="366" />
-			<Collapse line="377" />
-			<Collapse line="387" />
-			<Collapse line="397" />
-			<Collapse line="410" />
-			<Collapse line="426" />
-			<Collapse line="440" />
-			<Collapse line="452" />
-			<Collapse line="457" />
-			<Collapse line="467" />
-			<Collapse line="477" />
-			<Collapse line="487" />
-			<Collapse line="497" />
-			<Collapse line="507" />
-			<Collapse line="517" />
+			<Collapse line="270" />
+			<Collapse line="276" />
+			<Collapse line="287" />
+			<Collapse line="298" />
+			<Collapse line="306" />
+			<Collapse line="317" />
+			<Collapse line="333" />
+			<Collapse line="342" />
+			<Collapse line="353" />
+			<Collapse line="365" />
+			<Collapse line="376" />
+			<Collapse line="386" />
+			<Collapse line="396" />
+			<Collapse line="409" />
+			<Collapse line="425" />
+			<Collapse line="439" />
+			<Collapse line="451" />
+			<Collapse line="456" />
+			<Collapse line="466" />
+			<Collapse line="476" />
+			<Collapse line="486" />
+			<Collapse line="496" />
+			<Collapse line="506" />
+			<Collapse line="516" />
 		</Folding>
-	</File>
-	<File name="Funciones.h" open="0" top="0" tabpos="0" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="212" topLine="0" />
-		</Cursor>
-	</File>
-	<File name="Operaciones.h" open="0" top="0" tabpos="4" split="0" active="1" splitpos="0" zoom_1="0" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="152" topLine="0" />
-		</Cursor>
-	</File>
-	<File name="main.c" open="1" top="0" tabpos="1" split="0" active="1" splitpos="0" zoom_1="3" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="1037" topLine="0" />
-		</Cursor>
-		<Folding>
-			<Collapse line="84" />
-		</Folding>
-	</File>
-	<File name="Operaciones.c" open="1" top="0" tabpos="4" split="0" active="1" splitpos="0" zoom_1="2" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="1" topLine="0" />
-		</Cursor>
-		<Folding>
-			<Collapse line="3" />
-			<Collapse line="8" />
-			<Collapse line="27" />
-			<Collapse line="101" />
-			<Collapse line="133" />
-		</Folding>
-	</File>
-	<File name="MVTipos.h" open="1" top="1" tabpos="3" split="0" active="1" splitpos="0" zoom_1="4" zoom_2="0">
-		<Cursor>
-			<Cursor1 position="221" topLine="0" />
-		</Cursor>
 	</File>
 </CodeBlocks_layout_file>
