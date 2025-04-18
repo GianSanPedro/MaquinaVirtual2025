@@ -12,12 +12,13 @@ int main(int argc, char *argv[]){
 
     FILE *archBinario;
     TMV MV;
+    MV.ErrorFlag = 0;
     int modoDisassembler = 0;
     int BandStop = 0;
     char *nombreArchivo = NULL;
     TInstruccion InstruccionActual;                         // Para cargar la instruccion act
     unsigned int ipActual;                                  // Instruction Pointer
-    unsigned short tamCod;                                  // Para leer el tamanio del codigo
+    int tamCod;                                             // Para leer el tamanio del codigo
     char *header =(char *)malloc(sizeof(char) * 6);         // 0 - 4 Identificador "VMX25"
                                                             // 5 Version "1"
                                                             // 6 - 7 Tamanio del codigo
@@ -36,25 +37,26 @@ int main(int argc, char *argv[]){
         return 1;
     }
 
-    MV.ErrorFlag = 0;
-
     // Cargo en memoria
     archBinario = fopen(nombreArchivo, "rb");
     if (!archBinario) {
         fprintf(stderr, ">> Error: no se pudo abrir el archivo '%s'\n", nombreArchivo);
         return 1;
     }
-    fread(header, sizeof(char), 6, archBinario);            // Obtengo el header (6 bytes)
-    fread(&tamCod, sizeof(unsigned short), 1, archBinario); // Leo el tamanio del codigo (2 bytes)
+    fread(header, sizeof(char), 6, archBinario);                    // Obtengo el header (6 bytes)
+    unsigned char high, low;
+    fread(&high, sizeof(char), 1, archBinario);
+    fread(&low, sizeof(char), 1, archBinario);
+    tamCod = (high << 8) | low;
 
-    MV.TDS[0] = (0 << 16) | tamCod;                         // Segmento de código: base = 0, tamaño = tamCod
-    MV.TDS[1] = (tamCod << 16) | (16384 - tamCod);          // Segmento de datos: base = tamCod, tamaño restante
+    MV.TDS[0] = (0 << 16) | tamCod;                                 // Segmento de código: base = 0, tamaño = tamCod
+    MV.TDS[1] = ((unsigned int)tamCod << 16) | (16384 - tamCod);    // Segmento de datos: base = tamCod, tamaño restante
 
-    MV.registros[CS] = (0 << 16);                           // CS = 0x00000000 → segmento 0, offset 0
-    MV.registros[DS] = (1 << 16);                           // DS = 0x00010000 → segmento 1, offset 0
-    MV.registros[IP] = MV.registros[CS];                    // IP apunta a inicio del segmento de código
+    MV.registros[CS] = (0 << 16);                                   // CS = 0x00000000 → segmento 0, offset 0
+    MV.registros[DS] = (1 << 16);                                   // DS = 0x00010000 → segmento 1, offset 0
+    MV.registros[IP] = MV.registros[CS];                            // IP apunta a inicio del segmento de código
 
-    fread(MV.memoria, sizeof(char), tamCod, archBinario);   // Carga la totalidad del codigo
+    fread(MV.memoria, sizeof(char), tamCod, archBinario);           // Carga la totalidad del codigo
     fclose(archBinario);
 
     // Imprimo Disassembler
@@ -70,13 +72,23 @@ int main(int argc, char *argv[]){
             }
             ipTemp += inst.tamanio;
         }
-        printf("\n");
+        printf(" Error flag %d\n\n", MV.ErrorFlag);
     }
 
     // Reiniciar el Instruction Pointer despues de recorrer
-    MV.registros[IP] = MV.registros[CS];
+    MV.registros[CS] = (0 << 16);                                   // CS = 0x00000000 → segmento 0, offset 0
+    MV.registros[DS] = (1 << 16);                                   // DS = 0x00010000 → segmento 1, offset 0
+    MV.registros[IP] = MV.registros[CS];                            // IP apunta a inicio del segmento de código
 
     //Comienza la ejecucion
+    printf("\n>> Tamanio codigo: %d\n", tamCod);
+    printf("\n>> Tabla de Segmentos seteada\n");
+    for (int i = 0; i < 2; i++) {
+        int base = MV.TDS[i] >> 16;
+        int limite = MV.TDS[i] & 0xFFFF;
+        printf("TDS[%d] -> base: %d (0x%04X), tamanio: %d (0x%04X)\n", i, base, base, limite, limite);
+    }
+    printf("\n>> Codigo assembler en ejecucion:\n");
     while (MV.registros[IP] < tamCod && !BandStop && !MV.ErrorFlag) {
         ipActual = MV.registros[IP];
 
@@ -89,12 +101,15 @@ int main(int argc, char *argv[]){
             if (InstruccionActual.codOperacion == 0x0F) {
                 BandStop = 1;
             } else {
+                //MostrarInstruccion(InstruccionActual, MV.memoria);
+                //printf("DEBUG IP antes: %d  tamanio instruccion: %d\n", MV.registros[IP], InstruccionActual.tamanio);
                 procesarInstruccion(&MV, InstruccionActual);
-            }
 
-            // Si no hubo salto, avanzar IP
-            if (MV.registros[IP] == ipActual) {
-                MV.registros[IP] += InstruccionActual.tamanio;
+                // Si no hubo salto, avanzar IP
+                if (MV.registros[IP] == ipActual) {
+                    MV.registros[IP] += InstruccionActual.tamanio;
+                }
+                //printf("DEBUG IP despues: %d\n", MV.registros[IP]);
             }
         }
     }
@@ -198,6 +213,9 @@ TInstruccion LeerInstruccionCompleta(TMV *MV, int ip) {
             //inst.op1.valor = MV->memoria[cursor] | (MV->memoria[cursor + 1] << 8);            //little-endian
             inst.op1.valor = (MV->memoria[cursor] << 8) | MV->memoria[cursor + 1];              //big-endian
             cursor += 2;
+            if (inst.codOperacion == 0x00) {
+                //printf("DEBUG LeerInstruccionCompleta SYS: tipo1 = %d, valor = %d (0x%04X)\n", inst.op1.tipo, inst.op1.valor, inst.op1.valor);
+            }
             break;
         }
         case 3: {

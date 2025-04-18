@@ -23,13 +23,15 @@ void actualizarNZ(TMV *mv, int resultado) {
 }
 
 int leerValor(TMV *mv, TOperando op) {
-    if (mv->ErrorFlag) return 1;
-
+    if (mv->ErrorFlag!=0){
+        //printf("SALTO FLAG EN LeerValor \n");
+        return;
+    }
     switch (op.tipo) {
         case 1: { // Registro
             unsigned int valor = mv->registros[op.registro];
             switch (op.segmentoReg) {
-                case 0: return valor;                              // EAX completo
+                case 0: return valor;                               // EAX completo
                 case 1: return valor & 0xFF;                        // AL
                 case 2: return (valor >> 8) & 0xFF;                 // AH
                 case 3: return valor & 0xFFFF;                      // AX
@@ -37,9 +39,10 @@ int leerValor(TMV *mv, TOperando op) {
             }
         }
 
-        case 2: // Inmediato
+        case 2: { // Inmediato
+            //printf("LV: Leer inmediato: %d\n", op.valor);
             return op.valor;
-
+        }
         case 3: { // Memoria siempre 4 bytes (acceso logico)
             int selector, offset_registro;
 
@@ -49,20 +52,15 @@ int leerValor(TMV *mv, TOperando op) {
                 offset_registro = 0;
             } else {
                 unsigned int contenido = mv->registros[op.registro];
-
-                if (contenido == 0) {
-                    // Registro especificado pero sin inicializar -> fallback a DS
-                    selector = 1;
-                    offset_registro = 0;
-                } else {
-                    selector = contenido >> 16;
-                    offset_registro = contenido & 0xFFFF;
-                }
+                selector = contenido >> 16;
+                offset_registro = contenido & 0xFFFF;
             }
 
             int offset_instruc = op.desplazamiento;   // obtenemos el offset (dentro del segmento) del operando de la instruccion
             int base = mv->TDS[selector] >> 16;       // obtenemos la base fisica del segmento
             int direccion = base + offset_registro + offset_instruc;
+
+            printf("LV: Leer de direccion fisica: %d (0x%04X)  selector: %d  base: %d  offset_reg: %d  offset_instr: %d\n", direccion, direccion, selector, base, offset_registro, offset_instruc);
 
             if (esDireccionValida(mv, selector, direccion, 4)) {
                 int val = 0;
@@ -79,8 +77,10 @@ int leerValor(TMV *mv, TOperando op) {
 }
 
 void escribirValor(TMV *mv, TOperando op, int valor) {
-    if (mv->ErrorFlag) return;
-
+    if (mv->ErrorFlag!=0){
+       // printf("SALTO FLAG EN escribirValor \n");
+        return;
+    }
     // No se escribe en inmediatos ni operandos vacios
     switch (op.tipo) {
         case 1: { // Registro
@@ -115,18 +115,15 @@ void escribirValor(TMV *mv, TOperando op, int valor) {
                 offset_registro = 0;
             } else {
                 unsigned int contenido = mv->registros[op.registro];
-                if (contenido == 0) {
-                    selector = 1;
-                    offset_registro = 0;
-                } else {
-                    selector = contenido >> 16;
-                    offset_registro = contenido & 0xFFFF;
-                }
+                selector = contenido >> 16;
+                offset_registro = contenido & 0xFFFF;
             }
 
             int offset_instruc = op.desplazamiento;                     // desplazamiento dentro del segmento
             int base = mv->TDS[selector] >> 16;                         // base fisica del segmento
             int direccion = base + offset_registro + offset_instruc;
+
+            printf("EV: Escribir en direccion fisica: %d (0x%04X)  selector: %d  base: %d  offset_reg: %d  offset_instr: %d\n", direccion, direccion, selector, base, offset_registro, offset_instruc);
 
             // Valido los limites de escritura
             if (esDireccionValida(mv, selector, direccion, 4)) {
@@ -148,19 +145,18 @@ void leerDesdeTeclado(TMV *mv) {
         selector = 1;                           // usar DS por defecto
         offset = 0;
     } else {
-        selector = edxVal >> 16;                // índice de la TDS
+        selector = edxVal >> 16;                // indice de la TDS
         offset   = edxVal & 0xFFFF;             // offset dentro del segmento
     }
 
-    int base = mv->TDS[selector] >> 16;         // Base física real del segmento
-
+    int base = mv->TDS[selector] >> 16;         // Base fisica real del segmento
 
     int ecx  = mv->registros[ECX];
-    int cant = ecx & 0xFF;                      // CL: cantidad de elementos
-    int tam  = (ecx >> 8) & 0xFF;               // CH: tamaño de cada elemento
+    int cant = ecx & 0xFF;                      // CL: cantidad
+    int tam  = (ecx >> 8) & 0xFF;               // CH: tamaño por celda
 
     int eax  = mv->registros[EAX];
-    int modo = eax & 0xFF;                      // AL
+    int modo = eax & 0xFF;                      // AL: modo de impresion
 
     for (int i = 0; i < cant; i++) {
         int direccion = base + offset + i * tam;
@@ -197,7 +193,7 @@ void leerDesdeTeclado(TMV *mv) {
     }
 }
 
-void escribirEnPantalla(TMV *mv) {
+void escribirEnPantalla(TMV *mv) { //Imprimir
     if (mv->ErrorFlag) return;
     unsigned int edxVal = mv->registros[EDX];
 
@@ -274,6 +270,7 @@ int esDireccionValida(TMV *mv, int selector, int direccion, int tam) {
         printf(">> ❌ Acceso fuera de la RAM: dirección %d excede memoria real (16384 bytes)\n", direccion);
         return 0;
     }
+    printf("DV: Direccion fisica validada: %d (0x%04X)  selector: %d  BaseSegmento: %d  TamanioSegmento: %d\n", direccion, direccion, selector, base, tamanio);
 
     return 1; // Direccion valida
 }
@@ -452,8 +449,8 @@ void SYS(TMV *mv, TOperando op1) {
         case 1: leerDesdeTeclado(mv); break;
         case 2: escribirEnPantalla(mv); break;
         default:
-            printf("Error: Llamada al sistema no valida: SYS %d\n", syscall_id);
-            mv->ErrorFlag = 1;
+            printf("Error: Llamada al sistema no valida: SYS %d   valor: %d\n", syscall_id, op1.valor);
+            mv->ErrorFlag = 4;
     }
 }
 

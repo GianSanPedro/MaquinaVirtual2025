@@ -12,7 +12,7 @@
 
 typedef char instruccion;
 typedef struct{
-    instruccion memoria[16384];     // Memoria principal (RAM) de 16 KiB
+    char memoria[16384];     // Memoria principal (RAM) de 16 KiB
     int TDS[8];                     // Tabla de Descriptores de Segmentos
     unsigned int registros[16];     // 16 registros de 4 bytes (se utilizan 11 en esta primera parte)
     int ErrorFlag;                  // Bandera para detectar errores

@@ -132,6 +132,7 @@ void MostrarInstruccion(TInstruccion inst, char *memoria) {
 }
 
 void procesarInstruccion(TMV *mv, TInstruccion inst) {
+    unsigned int ip_backup = mv->registros[IP];
     switch (inst.codOperacion) {
         // Instrucciones de 2 operandos
         case 0x10: MOV(mv, inst.op1, inst.op2); break;
@@ -163,4 +164,13 @@ void procesarInstruccion(TMV *mv, TInstruccion inst) {
         case 0x06: JNP(mv, inst.op1); break;
         case 0x07: JNN(mv, inst.op1); break;
     }
+
+    if (mv->registros[IP] != ip_backup && inst.codOperacion != 0x01 /* JMP */ &&
+    inst.codOperacion != 0x02 /* JZ */ && inst.codOperacion != 0x03 /* JP */ &&
+    inst.codOperacion != 0x04 /* JN */ && inst.codOperacion != 0x05 /* JNZ */ &&
+    inst.codOperacion != 0x06 /* JNP */ && inst.codOperacion != 0x07 /* JNN */) {
+
+    printf("Advertencia: IP fue modificado por una instruccion que no deberia: 0x%02X\n", inst.codOperacion);
+    }
+
 }
