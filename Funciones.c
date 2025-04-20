@@ -23,10 +23,7 @@ void actualizarNZ(TMV *mv, int resultado) {
 }
 
 int leerValor(TMV *mv, TOperando op) {
-    if (mv->ErrorFlag!=0){
-        //printf("SALTO FLAG EN LeerValor \n");
-        return;
-    }
+    if (mv->ErrorFlag) return;
     switch (op.tipo) {
         case 1: { // Registro
             unsigned int valor = mv->registros[op.registro];
@@ -40,7 +37,7 @@ int leerValor(TMV *mv, TOperando op) {
         }
 
         case 2: { // Inmediato
-            //printf("LV: Leer inmediato: %d\n", op.valor);
+            printf("LV: Leer inmediato: %d\n", op.valor);
             return op.valor;
         }
         case 3: { // Memoria siempre 4 bytes (acceso logico)
@@ -77,10 +74,7 @@ int leerValor(TMV *mv, TOperando op) {
 }
 
 void escribirValor(TMV *mv, TOperando op, int valor) {
-    if (mv->ErrorFlag!=0){
-       // printf("SALTO FLAG EN escribirValor \n");
-        return;
-    }
+    if (mv->ErrorFlag) return;
     // No se escribe en inmediatos ni operandos vacios
     switch (op.tipo) {
         case 1: { // Registro
@@ -103,6 +97,10 @@ void escribirValor(TMV *mv, TOperando op, int valor) {
                     *reg = (*reg & 0xFFFF0000) | (valor & 0xFFFF);
                     break;
             }
+            // Verificación
+            unsigned int verificado = leerValor(mv, op);
+            printf("EV: Registro R%d tipo %d actualizado a %d (verificado: %d)\n",
+                   op.registro, op.segmentoReg, valor, verificado);
             break;
         }
 
@@ -124,14 +122,22 @@ void escribirValor(TMV *mv, TOperando op, int valor) {
             int direccion = base + offset_registro + offset_instruc;
 
             printf("EV: Escribir en direccion fisica: %d (0x%04X)  selector: %d  base: %d  offset_reg: %d  offset_instr: %d\n", direccion, direccion, selector, base, offset_registro, offset_instruc);
+            printf("EV: → valor a escribir = %d\n", valor);
 
             // Valido los limites de escritura
             if (esDireccionValida(mv, selector, direccion, 4)) {
                 mv->memoria[direccion]     = (valor >> 24) & 0xFF;
                 mv->memoria[direccion + 1] = (valor >> 16) & 0xFF;
-                mv->memoria[direccion + 2] = (valor >> 8)  & 0xFF;
+                mv->memoria[direccion + 2] = (valor >> 8) & 0xFF;
                 mv->memoria[direccion + 3] = valor & 0xFF;
+
+                // Verificar post-escritura
+                int verificado = leerValor(mv, op);
+                printf("EV: Memoria [%d] escrita con %d, verificado: %d\n", direccion, valor, verificado);
+            } else {
+                printf("EV: ERROR - Dirección inválida al escribir en memoria\n");
             }
+            break;
         }
     }
 }
@@ -270,7 +276,7 @@ int esDireccionValida(TMV *mv, int selector, int direccion, int tam) {
         printf(">> ❌ Acceso fuera de la RAM: dirección %d excede memoria real (16384 bytes)\n", direccion);
         return 0;
     }
-    printf("DV: Direccion fisica validada: %d (0x%04X)  selector: %d  BaseSegmento: %d  TamanioSegmento: %d\n", direccion, direccion, selector, base, tamanio);
+    //printf("DV: Direccion fisica validada: %d (0x%04X)  selector: %d  BaseSegmento: %d  TamanioSegmento: %d\n", direccion, direccion, selector, base, tamanio);
 
     return 1; // Direccion valida
 }
@@ -284,11 +290,14 @@ void ADD(TMV *mv, TOperando op1, TOperando op2) {
     int valor1 = leerValor(mv, op1);
     int valor2 = leerValor(mv, op2);
 
+    //printf("DEBUG ADD: valor1 = %d, valor2 = %d\n", valor1, valor2);
+
     int resultado = valor1 + valor2;
 
     escribirValor(mv, op1, resultado);
-
     actualizarNZ(mv, resultado);
+
+    //printf("ADD: valor final en destino (tipo %d, desp %d) = %d\n", op1.tipo, op1.desplazamiento, leerValor(mv, op1));
 }
 
 void SUB(TMV *mv, TOperando op1, TOperando op2) {
@@ -350,6 +359,8 @@ void SHL(TMV *mv, TOperando op1, TOperando op2) {
     int desplazamiento = leerValor(mv, op2);
 
     int resultado = valor << desplazamiento;
+
+    //printf("SHL: [%d] << %d = %d\n", valor, desplazamiento, resultado);
 
     escribirValor(mv, op1, resultado);
 
@@ -530,7 +541,34 @@ void NOT(TMV *mv, TOperando op1) {
 }
 
 
+void imprimirRegistrosGenerales(TMV *mv) {
+    const char* nombres[] = {"EAX", "EBX", "ECX", "EDX", "EEX", "EFX"};
+    printf("\n>> Estado de registros generales:\n");
+    for (int i = 10; i <= 15; i++) {
+        unsigned int reg = mv->registros[i];
+        unsigned int selector = reg >> 16;
+        unsigned int offset   = reg & 0xFFFF;
+        printf("%s = 0x%08X (%d)  [selector: %u | offset: %u]\n", nombres[i - 10], reg, reg, selector, offset);
+    }
+}
+/*
+void imprimirRegistrosGenerales(TMV *mv) {
+    const char* nombres[] = {"EAX", "EBX", "ECX", "EDX", "EEX", "EFX"};
+    printf("\n>> Estado de registros generales:\n");
+    int i = 13; //EDX
+    unsigned int reg = mv->registros[i];
+    unsigned int selector = reg >> 16;
+    unsigned int offset   = reg & 0xFFFF;
+    printf("%s = 0x%08X (%d)  [selector: %u | offset: %u]\n", nombres[i - 10], reg, reg, selector, offset);
 
+    i = 15; //EFX
+    reg = mv->registros[i];
+    selector = reg >> 16;
+    offset   = reg & 0xFFFF;
+    printf("%s = 0x%08X (%d)  [selector: %u | offset: %u]\n", nombres[i - 10], reg, reg, selector, offset);
+
+}
+*/
 
 
 

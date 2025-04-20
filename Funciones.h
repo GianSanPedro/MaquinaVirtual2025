@@ -1,6 +1,6 @@
 void actualizarNZ(TMV *mv, int resultado);
 
-int leerValor(TMV *mv, TOperando op);
+int leerValor(TMV *mv, TOperando op, int tam);
 
 void escribirValor(TMV *mv, TOperando op, int valor);
 
@@ -57,3 +57,5 @@ void JNP(TMV *mv, TOperando op1);
 void JNN(TMV *mv, TOperando op1);
 
 void NOT(TMV *mv, TOperando op1);
+
+void imprimirRegistrosGenerales(TMV *mv);

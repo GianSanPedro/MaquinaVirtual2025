@@ -92,7 +92,7 @@ int main(int argc, char *argv[]){
     while (MV.registros[IP] < tamCod && !BandStop && !MV.ErrorFlag) {
         ipActual = MV.registros[IP];
 
-        // Leo la instrucción desde memoria
+        // Leo la instruccion desde memoria
         InstruccionActual = LeerInstruccionCompleta(&MV, ipActual);
 
         // Verifico que no se haya detectado un error en la decodificacion antes de ejecutar
@@ -101,15 +101,15 @@ int main(int argc, char *argv[]){
             if (InstruccionActual.codOperacion == 0x0F) {
                 BandStop = 1;
             } else {
-                //MostrarInstruccion(InstruccionActual, MV.memoria);
-                //printf("DEBUG IP antes: %d  tamanio instruccion: %d\n", MV.registros[IP], InstruccionActual.tamanio);
+                printf("\n");
+                MostrarInstruccion(InstruccionActual, MV.memoria);
                 procesarInstruccion(&MV, InstruccionActual);
+                //imprimirRegistrosGenerales(&MV);
 
-                // Si no hubo salto, avanzar IP
-                if (MV.registros[IP] == ipActual) {
+                // Si no hubo salto ni error, avanzar IP
+                if (MV.registros[IP] == ipActual && !MV.ErrorFlag) {
                     MV.registros[IP] += InstruccionActual.tamanio;
                 }
-                //printf("DEBUG IP despues: %d\n", MV.registros[IP]);
             }
         }
     }
