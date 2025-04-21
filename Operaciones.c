@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "MVTipos.h"
 #include "Funciones.h"
+#include "Operaciones.h"
 
 const char *mnemonicos[] = {
     "SYS", "JMP", "JZ", "JP", "JN", "JNZ", "JNP", "JNN", "NOT", "", "", "", "", "", "", "STOP",
@@ -114,7 +115,7 @@ void MostrarInstruccion(TInstruccion inst, char *memoria) {
         printf("   ");
     }
 
-    printf("|  %s", mnemonicos[inst.codOperacion]);
+    printf("|  %s", mnemonicos[(int)inst.codOperacion]);
 
     // Mostrar operandos si existen
     int tieneOp1 = inst.op1.tipo != 0;
@@ -148,13 +149,13 @@ void procesarInstruccion(TMV *mv, TInstruccion inst) {
         case 0x19: AND(mv, inst.op1, inst.op2); break;
         case 0x1A: OR(mv, inst.op1, inst.op2); break;
         case 0x1B: XOR(mv, inst.op1, inst.op2); break;
+        case 0x1C: LDL(mv, inst.op1, inst.op2); break;
+        case 0x1D: LDH(mv, inst.op1, inst.op2); break;
+        case 0x1E: RND(mv, inst.op1, inst.op2); break;
 
         // Instrucciones de 1 operando
         case 0x00: SYS(mv, inst.op1); break;
         case 0x08: NOT(mv, inst.op1); break;
-        case 0x1C: LDL(mv, inst.op1, inst.op2); break;
-        case 0x1D: LDH(mv, inst.op1, inst.op2); break;
-        case 0x1E: RND(mv, inst.op1, inst.op2); break;
 
         // Saltos (usan op1.valor como destino)
         case 0x01: JMP(mv, inst.op1); break;

@@ -3,6 +3,7 @@
 #include <time.h>
 #include "MVTipos.h"
 #include "Operaciones.h"
+#include "Funciones.h"
 
 
 // En C int son 4 bytes

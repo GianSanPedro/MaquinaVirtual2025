@@ -47,3 +47,30 @@
 	"MVTipos.h"
 	"Funciones.h"
 
+1745124394 source:c:\users\ivan_\documents\facultad\3año\arquitectura_de_computadoras\maquina_virtual\maquinavirtual2025\main.c
+	<stdio.h>
+	<stdlib.h>
+	"MVTipos.h"
+	"Operaciones.h"
+	"Funciones.h"
+
+1745117248 c:\users\ivan_\documents\facultad\3año\arquitectura_de_computadoras\maquina_virtual\maquinavirtual2025\mvtipos.h
+
+1744296904 c:\users\ivan_\documents\facultad\3año\arquitectura_de_computadoras\maquina_virtual\maquinavirtual2025\operaciones.h
+
+1745277355 c:\users\ivan_\documents\facultad\3año\arquitectura_de_computadoras\maquina_virtual\maquinavirtual2025\funciones.h
+
+1745277479 source:c:\users\ivan_\documents\facultad\3año\arquitectura_de_computadoras\maquina_virtual\maquinavirtual2025\operaciones.c
+	<stdio.h>
+	"MVTipos.h"
+	"Funciones.h"
+	"Operaciones.h"
+
+1745261797 source:c:\users\ivan_\documents\facultad\3año\arquitectura_de_computadoras\maquina_virtual\maquinavirtual2025\funciones.c
+	<stdio.h>
+	<stdlib.h>
+	<time.h>
+	"MVTipos.h"
+	"Operaciones.h"
+	"Funciones.h"
+

@@ -1,6 +1,6 @@
 void actualizarNZ(TMV *mv, int resultado);
 
-int leerValor(TMV *mv, TOperando op, int tam);
+int leerValor(TMV *mv, TOperando op);
 
 void escribirValor(TMV *mv, TOperando op, int valor);
 
