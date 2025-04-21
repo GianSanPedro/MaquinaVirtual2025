@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "MVTipos.h"
+#include "Funciones.h"
 
 const char *mnemonicos[] = {
     "SYS", "JMP", "JZ", "JP", "JN", "JNZ", "JNP", "JNN", "NOT", "", "", "", "", "", "", "STOP",
@@ -151,9 +152,9 @@ void procesarInstruccion(TMV *mv, TInstruccion inst) {
         // Instrucciones de 1 operando
         case 0x00: SYS(mv, inst.op1); break;
         case 0x08: NOT(mv, inst.op1); break;
-        case 0x1C: LDL(mv, inst.op1); break;
-        case 0x1D: LDH(mv, inst.op1); break;
-        case 0x1E: RND(mv, inst.op1); break;
+        case 0x1C: LDL(mv, inst.op1, inst.op2); break;
+        case 0x1D: LDH(mv, inst.op1, inst.op2); break;
+        case 0x1E: RND(mv, inst.op1, inst.op2); break;
 
         // Saltos (usan op1.valor como destino)
         case 0x01: JMP(mv, inst.op1); break;

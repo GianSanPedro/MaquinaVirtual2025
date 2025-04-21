@@ -34,9 +34,9 @@ void OR(TMV *mv, TOperando op1, TOperando op2);
 
 void XOR(TMV *mv, TOperando op1, TOperando op2);
 
-void LDL(TMV *mv, TOperando op1);
+void LDL(TMV *mv, TOperando op1, TOperando op2);
 
-void LDH(TMV *mv, TOperando op1);
+void LDH(TMV *mv, TOperando op1, TOperando op2);
 
 void RND(TMV *mv, TOperando op1, TOperando op2);
 
