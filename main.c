@@ -102,14 +102,16 @@ int main(int argc, char *argv[]){
                 BandStop = 1;
             } else {
                 //printf("\n");
+                //printf("IP ACTUAL: %d: \n", ipActual);
                 //MostrarInstruccion(InstruccionActual, MV.memoria);
                 procesarInstruccion(&MV, InstruccionActual);
                 //imprimirRegistrosGenerales(&MV);
+                //printf("\n");
 
                 //Por si hago algun salto
                 if (!esIPValida(&MV)) {
-                    printf("ERROR: IP fuera del segmento de codigo: 0x%X\n", MV.registros[IP]);
-                    MV.ErrorFlag = 4;
+                    printf("ERROR: IP fuera del segmento de codigo: [%.4X] (%d)\n", MV.registros[IP], MV.registros[IP]);
+                    MV.ErrorFlag = 2;
                 }
 
                 // Si no hubo salto ni error, avanzar IP

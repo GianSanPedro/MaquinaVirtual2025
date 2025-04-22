@@ -111,7 +111,7 @@ void MostrarInstruccion(TInstruccion inst, char *memoria) {
     }
 
     // Rellenar espacio si la instruccion es corta, para alinear la barra|
-    for (int i = inst.tamanio; i < 6; i++) {
+    for (int i = inst.tamanio; i < 8; i++) {
         printf("   ");
     }
 
