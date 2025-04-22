@@ -101,10 +101,16 @@ int main(int argc, char *argv[]){
             if (InstruccionActual.codOperacion == 0x0F) {
                 BandStop = 1;
             } else {
-                printf("\n");
-                MostrarInstruccion(InstruccionActual, MV.memoria);
+                //printf("\n");
+                //MostrarInstruccion(InstruccionActual, MV.memoria);
                 procesarInstruccion(&MV, InstruccionActual);
                 //imprimirRegistrosGenerales(&MV);
+
+                //Por si hago algun salto
+                if (!esIPValida(&MV)) {
+                    printf("ERROR: IP fuera del segmento de codigo: 0x%X\n", MV.registros[IP]);
+                    MV.ErrorFlag = 4;
+                }
 
                 // Si no hubo salto ni error, avanzar IP
                 if (MV.registros[IP] == ipActual && !MV.ErrorFlag) {
@@ -230,6 +236,13 @@ TInstruccion LeerInstruccionCompleta(TMV *MV, int ip) {
 
     inst.tamanio = cursor - ip;
     return inst;
+}
+
+int esIPValida(TMV *mv) {
+    int base = mv->TDS[CS] >> 16;
+    int tam = mv->TDS[CS] & 0xFFFF;
+    int ip = mv->registros[IP];
+    return (ip >= base && ip < base + tam);
 }
 
 void reportEstado(int estado)
