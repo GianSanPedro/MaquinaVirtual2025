@@ -52,8 +52,8 @@ int main(int argc, char *argv[]){
     MV.TDS[0] = (0 << 16) | tamCod;                                 // Segmento de código: base = 0, tamaño = tamCod
     MV.TDS[1] = ((unsigned int)tamCod << 16) | (16384 - tamCod);    // Segmento de datos: base = tamCod, tamaño restante
 
-    MV.registros[CS] = (0 << 16);                                   // CS = 0x00000000 → segmento 0, offset 0
-    MV.registros[DS] = (1 << 16);                                   // DS = 0x00010000 → segmento 1, offset 0
+    MV.registros[CS] = (0 << 16);                                   // CS = 0x00000000 -> segmento 0, offset 0
+    MV.registros[DS] = (1 << 16);                                   // DS = 0x00010000 -> segmento 1, offset 0
     MV.registros[IP] = MV.registros[CS];                            // IP apunta a inicio del segmento de código
 
     fread(MV.memoria, sizeof(char), tamCod, archBinario);           // Carga la totalidad del codigo
@@ -76,8 +76,8 @@ int main(int argc, char *argv[]){
     }
 
     // Reiniciar el Instruction Pointer despues de recorrer
-    MV.registros[CS] = (0 << 16);                                   // CS = 0x00000000 → segmento 0, offset 0
-    MV.registros[DS] = (1 << 16);                                   // DS = 0x00010000 → segmento 1, offset 0
+    MV.registros[CS] = (0 << 16);                                   // CS = 0x00000000 -> segmento 0, offset 0
+    MV.registros[DS] = (1 << 16);                                   // DS = 0x00010000 -> segmento 1, offset 0
     MV.registros[IP] = MV.registros[CS];                            // IP apunta a inicio del segmento de código
 
     //Comienza la ejecucion

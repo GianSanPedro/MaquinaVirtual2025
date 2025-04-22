@@ -22,16 +22,17 @@
 
 1744344602 c:\users\gianfranco\documents\proyectos c arquitectura\maquinavirtual2025\funciones.h
 
-1745208232 source:c:\users\gianfranco\documents\proyectos c arquitectura\maquinas virtuales\maquinavirtual2025\funciones.c
+1745289279 source:c:\users\gianfranco\documents\proyectos c arquitectura\maquinas virtuales\maquinavirtual2025\funciones.c
 	<stdio.h>
 	<stdlib.h>
 	<time.h>
 	"MVTipos.h"
 	"Operaciones.h"
+	"Funciones.h"
 
 1744504106 c:\users\gianfranco\documents\proyectos c arquitectura\maquinas virtuales\maquinavirtual2025\mvtipos.h
 
-1745123431 source:c:\users\gianfranco\documents\proyectos c arquitectura\maquinas virtuales\maquinavirtual2025\main.c
+1745289394 source:c:\users\gianfranco\documents\proyectos c arquitectura\maquinas virtuales\maquinavirtual2025\main.c
 	<stdio.h>
 	<stdlib.h>
 	"MVTipos.h"
@@ -40,12 +41,13 @@
 
 1744252661 c:\users\gianfranco\documents\proyectos c arquitectura\maquinas virtuales\maquinavirtual2025\operaciones.h
 
-1745208268 c:\users\gianfranco\documents\proyectos c arquitectura\maquinas virtuales\maquinavirtual2025\funciones.h
+1745282578 c:\users\gianfranco\documents\proyectos c arquitectura\maquinas virtuales\maquinavirtual2025\funciones.h
 
-1745208447 source:c:\users\gianfranco\documents\proyectos c arquitectura\maquinas virtuales\maquinavirtual2025\operaciones.c
+1745289394 source:c:\users\gianfranco\documents\proyectos c arquitectura\maquinas virtuales\maquinavirtual2025\operaciones.c
 	<stdio.h>
 	"MVTipos.h"
 	"Funciones.h"
+	"Operaciones.h"
 
 1745124394 source:c:\users\ivan_\documents\facultad\3año\arquitectura_de_computadoras\maquina_virtual\maquinavirtual2025\main.c
 	<stdio.h>

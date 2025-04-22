@@ -35,7 +35,7 @@ void MostrarOperando(TOperando op) {
             return;
         }
 
-        // Si es un registro especial, mostrarlo sin segmentar
+        // Si es un registro especial, lo mostramos sin segmentar
         if (op.registro <= 9) {
             printf("%s", regNombres[(int)op.registro]);
             return;
