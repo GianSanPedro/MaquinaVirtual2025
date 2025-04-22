@@ -201,14 +201,11 @@ void leerDesdeTeclado(TMV *mv) {
             // Escribir en memoria segun tamaño
             // Extiendo el valor si tam < 4
             if (tam == 1) {
-                valor = (valor << 24) >> 24;                        // Extiende signo desde 8 bits
                 mv->memoria[direccion] = valor & 0xFF;
             } else if (tam == 2) {
-                valor = (valor << 16) >> 16;                        // Extiende signo desde 16 bits
                 mv->memoria[direccion]     = (valor >> 8) & 0xFF;
                 mv->memoria[direccion + 1] = valor & 0xFF;
             } else if (tam == 4) {
-                // No necesita extensión
                 mv->memoria[direccion]     = (valor >> 24) & 0xFF;
                 mv->memoria[direccion + 1] = (valor >> 16) & 0xFF;
                 mv->memoria[direccion + 2] = (valor >> 8)  & 0xFF;
@@ -245,15 +242,11 @@ void escribirEnPantalla(TMV *mv) { //Imprimir
         int valor = 0;
 
         if (esDireccionValida(mv, selector, direccion, tam)) {
-            // Asumo que aca no hace falta extender ya que deberian estar guardados en 32 bits???
-            // Extiendo po si leo de memoria de parte parcial???
             if (tam == 1) {
                 valor = mv->memoria[direccion];
-                valor = (valor << 24) >> 24;  // Extiende signo de 8 bits
             }
             else if (tam == 2) {
                 valor = (mv->memoria[direccion] << 8) | mv->memoria[direccion + 1];
-                valor = (valor << 16) >> 16;  // Extiende signo de 16 bits
             }
             else if (tam == 4) {
                 valor = (mv->memoria[direccion]     << 24) |
