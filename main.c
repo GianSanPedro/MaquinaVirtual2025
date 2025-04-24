@@ -194,11 +194,10 @@ TInstruccion LeerInstruccionCompleta(TMV *MV, int ip) {
             inst.op2.segmentoReg = (byte >> 2) & 0x03;
             break;
         }
-        case 2: { // inmediato con sign-extension
+        case 2: { // inmediato
             unsigned char byte1 = (unsigned char) MV->memoria[cursor];
             unsigned char byte2 = (unsigned char) MV->memoria[cursor + 1];
-            int16_t valorConSigno = (int16_t)((byte1 << 8) | byte2);
-            inst.op2.valor = (int)valorConSigno;
+            inst.op2.valor = (byte1 << 8) | byte2;
             cursor += 2;
             break;
         }
@@ -223,11 +222,10 @@ TInstruccion LeerInstruccionCompleta(TMV *MV, int ip) {
             inst.op1.segmentoReg = (byte >> 2) & 0x03;
             break;
         }
-        case 2: { // inmediato con sign-extension
+        case 2: { // inmediato
             unsigned char byte1 = (unsigned char) MV->memoria[cursor];
             unsigned char byte2 = (unsigned char) MV->memoria[cursor + 1];
-            int16_t valorConSigno = (int16_t)((byte1 << 8) | byte2);
-            inst.op1.valor = (int)valorConSigno;
+            inst.op1.valor = (byte1 << 8) | byte2;
             cursor += 2;
             break;
         }

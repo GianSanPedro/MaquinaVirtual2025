@@ -574,7 +574,6 @@ void NOT(TMV *mv, TOperando op1) {
     actualizarNZ(mv, resultado);        // modifica CC
 }
 
-
 void imprimirRegistrosGenerales(TMV *mv) {
     const char* nombres[] = {"EAX", "EBX", "ECX", "EDX", "EEX", "EFX"};
     printf("\n>> Estado de registros generales:\n");
