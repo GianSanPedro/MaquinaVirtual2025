@@ -31,6 +31,7 @@ int leerValor(TMV *mv, TOperando op) {
             int valor = mv->registros[op.registro];
             switch (op.segmentoReg) {
                 case 0: {
+                    printf("LV reg: Leer REGISTRO: %d\n", valor);
                     return valor;                                   // EAX completo
                     break;
                 }
@@ -61,7 +62,7 @@ int leerValor(TMV *mv, TOperando op) {
         }
 
         case 2: { // Inmediato de 16 bits
-            //printf("LV: Leer inmediato: %d\n", op.valor);
+            printf("LV: Leer INMEDIATO: %d\n", op.valor);
             int valor = op.valor & 0xFFFF;
             valor = valor << 16;
             valor = valor >> 16;
@@ -89,10 +90,15 @@ int leerValor(TMV *mv, TOperando op) {
 
             if (esDireccionValida(mv, selector, direccion, 4)) {
                 int val = 0;
-                val |= mv->memoria[direccion]     << 24;
-                val |= mv->memoria[direccion + 1] << 16;
-                val |= mv->memoria[direccion + 2] << 8;
-                val |= mv->memoria[direccion + 3];
+
+                unsigned char byte1 = (unsigned char) mv->memoria[direccion];
+                unsigned char byte2 = (unsigned char) mv->memoria[direccion + 1];
+                unsigned char byte3 = (unsigned char) mv->memoria[direccion + 2];
+                unsigned char byte4 = (unsigned char) mv->memoria[direccion + 3];
+
+                val = (byte1 << 24) | (byte2 << 16) | (byte3 << 8) | byte4;
+
+                //printf("LV: Leer MEMORIA: %d\n", val);
                 return val;
             }
             else
@@ -147,7 +153,7 @@ void escribirValor(TMV *mv, TOperando op, int valor) {
             int direccion = base + offset_registro + offset_instruc;
 
             //printf("EV: Escribir en direccion fisica: %d (0x%04X)  selector: %d  base: %d  offset_reg: %d  offset_instr: %d\n", direccion, direccion, selector, base, offset_registro, offset_instruc);
-            //printf("EV: Valor a escribir = %d\n", valor);
+            printf("EV: Valor a escribir = %d\n", valor);
 
             // Valido los limites de escritura
             if (esDireccionValida(mv, selector, direccion, 4)) {
@@ -156,8 +162,6 @@ void escribirValor(TMV *mv, TOperando op, int valor) {
                 mv->memoria[direccion + 2] = (valor >> 8) & 0xFF;
                 mv->memoria[direccion + 3] = valor & 0xFF;
 
-                // Verificar post-escritura
-                //int verificado = leerValor(mv, op);
                 //printf("EV: Memoria [%d] escrita con %d, verificado: %d\n", direccion, valor, verificado);
             } else {
                 printf("EV: ERROR - Direccion invalida al escribir en memoria\n");
@@ -262,10 +266,18 @@ void escribirEnPantalla(TMV *mv) { //Imprimir
                 valor = (mv->memoria[direccion] << 8) | mv->memoria[direccion + 1];
             }
             else if (tam == 4) {
-                valor = (mv->memoria[direccion]     << 24) |
+                /*valor = (mv->memoria[direccion]     << 24) |
                         (mv->memoria[direccion + 1] << 16) |
                         (mv->memoria[direccion + 2] << 8)  |
                         mv->memoria[direccion + 3];
+                        */
+                unsigned char byte1 = (unsigned char) mv->memoria[direccion];
+                unsigned char byte2 = (unsigned char) mv->memoria[direccion + 1];
+                unsigned char byte3 = (unsigned char) mv->memoria[direccion + 2];
+                unsigned char byte4 = (unsigned char) mv->memoria[direccion + 3];
+
+                valor = (byte1 << 24) | (byte2 << 16) | (byte3 << 8) | byte4;
+
             }
 
             //printf("[%.4X]: ", direccion);
