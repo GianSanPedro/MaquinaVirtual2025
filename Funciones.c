@@ -31,7 +31,7 @@ int leerValor(TMV *mv, TOperando op) {
             int valor = mv->registros[op.registro];
             switch (op.segmentoReg) {
                 case 0: {
-                    printf("LV reg: Leer REGISTRO: %d\n", valor);
+                    //printf("LV reg: Leer REGISTRO: %d\n", valor);
                     return valor;                                   // EAX completo
                     break;
                 }
@@ -62,7 +62,7 @@ int leerValor(TMV *mv, TOperando op) {
         }
 
         case 2: { // Inmediato de 16 bits
-            printf("LV: Leer INMEDIATO: %d\n", op.valor);
+            //printf("LV: Leer INMEDIATO: %d\n", op.valor);
             int valor = op.valor & 0xFFFF;
             valor = valor << 16;
             valor = valor >> 16;
@@ -153,7 +153,7 @@ void escribirValor(TMV *mv, TOperando op, int valor) {
             int direccion = base + offset_registro + offset_instruc;
 
             //printf("EV: Escribir en direccion fisica: %d (0x%04X)  selector: %d  base: %d  offset_reg: %d  offset_instr: %d\n", direccion, direccion, selector, base, offset_registro, offset_instruc);
-            printf("EV: Valor a escribir = %d\n", valor);
+            //printf("EV: Valor a escribir = %d\n", valor);
 
             // Valido los limites de escritura
             if (esDireccionValida(mv, selector, direccion, 4)) {
@@ -289,15 +289,15 @@ void escribirEnPantalla(TMV *mv) { //Imprimir
             } else if (modo & 0x04) {
                 printf("[%.4X] | 0o%o", direccion, valor);
             } else if (modo & 0x02) {
-                /*
+
                 if (valor >= 32 && valor <= 126)
-                    printf("%c", valor);
+                    printf("[%.4X] | %c", direccion, valor);
                 else
-                    printf(".");
-                    */
-                printf("[%.4X] | %c", direccion, valor);
+                    printf("[%.4X] | .", direccion);
+
+                //printf("[%.4X] | %c", direccion, valor);
             }
-            printf("\n[%.4X] | 0x%X", direccion, valor);
+            printf("\n>> [%.4X] | 0x%X ", direccion, valor);
             //printf("\n[%.4X] | %d | 0x%X | 0o%o \n", direccion, valor, valor, valor);
             printf("\n");
         }
@@ -388,6 +388,7 @@ void DIV(TMV *mv, TOperando op1, TOperando op2) {
 
         escribirValor(mv, op1, resultado);
         actualizarNZ(mv, resultado);
+        mv->registros[AC]= dividendo % divisor;
     }
 }
 
@@ -396,7 +397,7 @@ void CMP(TMV *mv, TOperando op1, TOperando op2) {
     int valor2 = leerValor(mv, op2);
 
     int resultado = valor1 - valor2;
-
+    //printf("CMP OP1: %d \n", valor1); EJERCICIO 10 FIBONACCI
     actualizarNZ(mv, resultado);
 }
 
@@ -596,24 +597,44 @@ void imprimirRegistrosGenerales(TMV *mv) {
         printf("%s = 0x%08X (%d)  [selector: %u | offset: %u]\n", nombres[i - 10], reg, reg, selector, offset);
     }
 }
-/*
-void imprimirRegistrosGenerales(TMV *mv) {
-    const char* nombres[] = {"EAX", "EBX", "ECX", "EDX", "EEX", "EFX"};
+
+void imprimirEstado(TMV *mv) {
+    printf("\n>> Estado de memoria en DS:\n");
+
+    int ds_selector = mv->registros[DS] >> 16;
+    int base = mv->TDS[ds_selector] >> 16;
+
+    for (int offset = 4; offset <= 24; offset += 4) {
+        int direccion = base + offset;
+        int val = 0;
+
+        val |= ((unsigned char)mv->memoria[direccion])     << 24;
+        val |= ((unsigned char)mv->memoria[direccion + 1]) << 16;
+        val |= ((unsigned char)mv->memoria[direccion + 2]) << 8;
+        val |= ((unsigned char)mv->memoria[direccion + 3]);
+
+        printf("[DS + %2d] = %11d   (0x%08X)\n", offset, val, val);
+    }
+
     printf("\n>> Estado de registros generales:\n");
-    int i = 13; //EDX
-    unsigned int reg = mv->registros[i];
-    unsigned int selector = reg >> 16;
-    unsigned int offset   = reg & 0xFFFF;
-    printf("%s = 0x%08X (%d)  [selector: %u | offset: %u]\n", nombres[i - 10], reg, reg, selector, offset);
 
-    i = 15; //EFX
-    reg = mv->registros[i];
-    selector = reg >> 16;
-    offset   = reg & 0xFFFF;
-    printf("%s = 0x%08X (%d)  [selector: %u | offset: %u]\n", nombres[i - 10], reg, reg, selector, offset);
+    const char* nombres[] = {"EAX", "EBX", "ECX", "EDX", "EEX", "EFX"};
 
+    for (int i = 10; i <= 15; i++) {
+        int val = mv->registros[i];
+        printf("%s = %11d   (0x%08X)\n", nombres[i - 10], val, val);
+    }
+
+    printf("\n>> Registro CC:\n");
+
+    int cc = mv->registros[CC];
+    int N = (cc >> 31) & 1;
+    int Z = (cc >> 30) & 1;
+
+    printf("CC  = %11d   (0x%08X)\n", cc, cc);
+    printf("     Flags: N = %d, Z = %d\n", N, Z);
 }
-*/
+
 
 
 
