@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include "MVTipos.h"
 #include "Operaciones.h"
 #include "Funciones.h"
@@ -193,17 +194,22 @@ TInstruccion LeerInstruccionCompleta(TMV *MV, int ip) {
             inst.op2.segmentoReg = (byte >> 2) & 0x03;
             break;
         }
-        case 2: {// inmediato
-            //inst.op2.valor = MV->memoria[cursor] | (MV->memoria[cursor + 1] << 8);            //little-endian
-            inst.op2.valor = (MV->memoria[cursor] << 8) | MV->memoria[cursor + 1];              //big-endian
+        case 2: { // inmediato con sign-extension
+            unsigned char byte1 = (unsigned char) MV->memoria[cursor];
+            unsigned char byte2 = (unsigned char) MV->memoria[cursor + 1];
+            int16_t valorConSigno = (int16_t)((byte1 << 8) | byte2);
+            inst.op2.valor = (int)valorConSigno;
             cursor += 2;
             break;
         }
-        case 3: {// memoria
-            //inst.op2.desplazamiento = MV->memoria[cursor] | (MV->memoria[cursor + 1] << 8);   //little-endian
-            inst.op2.desplazamiento = (MV->memoria[cursor] << 8) | MV->memoria[cursor + 1];     //big-endian
-            unsigned char byte = MV->memoria[cursor + 2];
+        case 3: { // memoria
+            unsigned char byte1 = (unsigned char) MV->memoria[cursor];
+            unsigned char byte2 = (unsigned char) MV->memoria[cursor + 1];
+            inst.op2.desplazamiento = (byte1 << 8) | byte2;
+
+            unsigned char byte = (unsigned char) MV->memoria[cursor + 2];
             inst.op2.registro = (byte >> 4) & 0x0F;
+
             cursor += 3;
             break;
         }
@@ -217,20 +223,22 @@ TInstruccion LeerInstruccionCompleta(TMV *MV, int ip) {
             inst.op1.segmentoReg = (byte >> 2) & 0x03;
             break;
         }
-        case 2: {
-            //inst.op1.valor = MV->memoria[cursor] | (MV->memoria[cursor + 1] << 8);            //little-endian
-            inst.op1.valor = (MV->memoria[cursor] << 8) | MV->memoria[cursor + 1];              //big-endian
+        case 2: { // inmediato con sign-extension
+            unsigned char byte1 = (unsigned char) MV->memoria[cursor];
+            unsigned char byte2 = (unsigned char) MV->memoria[cursor + 1];
+            int16_t valorConSigno = (int16_t)((byte1 << 8) | byte2);
+            inst.op1.valor = (int)valorConSigno;
             cursor += 2;
-            if (inst.codOperacion == 0x00) {
-                //printf("DEBUG LeerInstruccionCompleta SYS: tipo1 = %d, valor = %d (0x%04X)\n", inst.op1.tipo, inst.op1.valor, inst.op1.valor);
-            }
             break;
         }
-        case 3: {
-            //inst.op1.desplazamiento = MV->memoria[cursor] | (MV->memoria[cursor + 1] << 8);   //little-endian
-            inst.op1.desplazamiento = (MV->memoria[cursor] << 8) | MV->memoria[cursor + 1];     //big-endian
-            unsigned char byte = MV->memoria[cursor + 2];
+        case 3: { // memoria
+            unsigned char byte1 = (unsigned char) MV->memoria[cursor];
+            unsigned char byte2 = (unsigned char) MV->memoria[cursor + 1];
+            inst.op1.desplazamiento = (byte1 << 8) | byte2;
+
+            unsigned char byte = (unsigned char) MV->memoria[cursor + 2];
             inst.op1.registro = (byte >> 4) & 0x0F;
+
             cursor += 3;
             break;
         }
