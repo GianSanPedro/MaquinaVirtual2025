@@ -50,7 +50,7 @@ int leerValor(TMV *mv, TOperando op) {
                     break;
                 }
                 case 3: {                                           // AX
-                    valor = op.valor & 0xFFFF;
+                    valor = valor & 0xFFFF;
                     valor = valor << 16;
                     valor = valor >> 16;
                     return valor;
@@ -283,7 +283,7 @@ void escribirEnPantalla(TMV *mv) { //Imprimir
             //printf("[%.4X]: ", direccion);
 
             if (modo & 0x10 || modo & 0x01) {
-                printf("[%.4X] | %d", direccion, valor);
+                printf("[%.4X] | %d (0x%X)", direccion, valor, valor);
             } else if (modo & 0x08) {
                 printf("[%.4X] | 0x%X", direccion, valor);
             } else if (modo & 0x04) {
@@ -297,7 +297,7 @@ void escribirEnPantalla(TMV *mv) { //Imprimir
 
                 //printf("[%.4X] | %c", direccion, valor);
             }
-            printf("\n>> [%.4X] | 0x%X ", direccion, valor);
+            //printf("\n>> [%.4X] | 0x%X ", direccion, valor);
             //printf("\n[%.4X] | %d | 0x%X | 0o%o \n", direccion, valor, valor, valor);
             printf("\n");
         }
@@ -604,7 +604,7 @@ void imprimirEstado(TMV *mv) {
     int ds_selector = mv->registros[DS] >> 16;
     int base = mv->TDS[ds_selector] >> 16;
 
-    for (int offset = 4; offset <= 24; offset += 4) {
+    for (int offset = 0; offset <= 44; offset += 4) {
         int direccion = base + offset;
         int val = 0;
 
