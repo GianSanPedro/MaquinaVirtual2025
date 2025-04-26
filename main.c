@@ -90,12 +90,19 @@ int main(int argc, char *argv[]){
     printf("\n>> Codigo assembler en ejecucion:\n");
     while (MV.registros[IP] < tamCod && !BandStop && !MV.ErrorFlag) {
         ipActual = MV.registros[IP];
+        if (!esIPValida(&MV)) {
+            printf("ERROR: IP fuera del Segmento de Codigo: [%.4X] (%d)\n", MV.registros[IP], MV.registros[IP]);
+            MV.ErrorFlag = 2;
+        }
 
         // Leo la instruccion desde memoria
         InstruccionActual = LeerInstruccionCompleta(&MV, ipActual);
 
+        MV.registros[IP] += InstruccionActual.tamanio;
+
         // Verifico que no se haya detectado un error en la decodificacion antes de ejecutar
         if (!MV.ErrorFlag){
+
             // Ejecutar o detectar STOP
             if (InstruccionActual.codOperacion == 0x0F) {
                 BandStop = 1;
@@ -107,17 +114,6 @@ int main(int argc, char *argv[]){
                 //imprimirEstado(&MV);
                 //imprimirRegistrosGenerales(&MV);
                 //printf("\n");
-
-                //Por si hago algun salto
-                if (!esIPValida(&MV)) {
-                    printf("ERROR: IP fuera del Segmento de Codigo: [%.4X] (%d)\n", MV.registros[IP], MV.registros[IP]);
-                    MV.ErrorFlag = 2;
-                }
-
-                // Si no hubo salto ni error, avanzar IP
-                if (MV.registros[IP] == ipActual && !MV.ErrorFlag) {
-                    MV.registros[IP] += InstruccionActual.tamanio;
-                }
             }
         }
     }

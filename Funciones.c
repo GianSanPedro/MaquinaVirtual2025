@@ -276,9 +276,8 @@ void escribirEnPantalla(TMV *mv) { //Imprimir
 
             }
 
-            //printf("[%.4X]: ", direccion);
             printf("[%.4X] | ", direccion);
-            if (modo & 0x10 || modo & 0x01) {
+            if (modo & 0x01) {
                 printf("%d ", valor);
             }
             if (modo & 0x08) {
@@ -294,6 +293,13 @@ void escribirEnPantalla(TMV *mv) { //Imprimir
                     printf(". ");
 
                 //printf("[%.4X] | %c", direccion, valor);
+            }
+            if (modo & 0x10) {
+                printf("0b");
+                for (int i = 31; i >= 0; i--) {
+                    printf("%d", (valor >> i) & 1);
+                    if (i % 8 == 0 && i != 0) printf(" ");  // separador cada 8 bits
+                }
             }
             //printf("\n>> [%.4X] | 0x%X ", direccion, valor);
             //printf("\n[%.4X] | %d | 0x%X | 0o%o \n", direccion, valor, valor, valor);

@@ -167,12 +167,14 @@ void procesarInstruccion(TMV *mv, TInstruccion inst) {
         case 0x07: JNN(mv, inst.op1); break;
     }
 
-    if (mv->registros[IP] != ip_backup && inst.codOperacion != 0x01 /* JMP */ &&
-    inst.codOperacion != 0x02 /* JZ */ && inst.codOperacion != 0x03 /* JP */ &&
-    inst.codOperacion != 0x04 /* JN */ && inst.codOperacion != 0x05 /* JNZ */ &&
-    inst.codOperacion != 0x06 /* JNP */ && inst.codOperacion != 0x07 /* JNN */) {
-
-    printf("Advertencia: IP fue modificado por una instruccion que no deberia: 0x%02X\n", inst.codOperacion);
+    if (mv->registros[IP] != ip_backup && !(inst.codOperacion >= 0x01 && inst.codOperacion <= 0x07)) {
+        printf("Advertencia: IP fue modificado por una instruccion que no deberia: 0x%02X\n", inst.codOperacion);
     }
 
+
+    // Verifico que los saltos no salgan del segmento
+    if ((inst.codOperacion >= 0x01 && inst.codOperacion <= 0x07) && !esIPValida(mv)) {
+        printf("ERROR: Salto IP fuera del Segmento de Codigo: [%.4X] (%d)\n", mv->registros[IP], mv->registros[IP]);
+        mv->ErrorFlag = 2;
+    }
 }
