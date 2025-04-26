@@ -277,21 +277,21 @@ void escribirEnPantalla(TMV *mv) { //Imprimir
             }
 
             //printf("[%.4X]: ", direccion);
-
+            printf("[%.4X] | ", direccion);
             if (modo & 0x10 || modo & 0x01) {
-                printf("[%.4X] | %d", direccion, valor);
+                printf("%d ", valor);
             }
             if (modo & 0x08) {
-                printf("[%.4X] | 0x%X", direccion, valor);
+                printf("0x%X ", valor);
             }
             if (modo & 0x04) {
-                printf("[%.4X] | 0o%o", direccion, valor);
+                printf("0o%o ", valor);
             }
             if (modo & 0x02) {
                 if (valor >= 32 && valor <= 126)
-                    printf("[%.4X] | %c", direccion, valor);
+                    printf("%c ", valor);
                 else
-                    printf("[%.4X] | .", direccion);
+                    printf(". ");
 
                 //printf("[%.4X] | %c", direccion, valor);
             }
