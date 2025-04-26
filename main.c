@@ -66,12 +66,19 @@ int main(int argc, char *argv[]){
     if (modoDisassembler) {
         printf("\n>> Codigo assembler cargado en memoria:\n");
         int ipTemp = 0;
+        int hayStop = 0;
         while (ipTemp < tamCod) {
             TInstruccion inst = LeerInstruccionCompleta(&MV, ipTemp);
+            if (inst.codOperacion == 0x0F){
+                    hayStop = 1;
+            }
             MostrarInstruccion(inst, MV.memoria);
             ipTemp += inst.tamanio;
         }
-        printf(" Error flag %d\n\n", MV.ErrorFlag);
+        printf("\nError flag %d\n", MV.ErrorFlag);
+        if (!hayStop){
+            printf("\nAdvertencia: STOP no presente en el codigo Assembler\n");
+        }
     }
 
     // Reiniciar el Instruction Pointer despues de recorrer
