@@ -28,7 +28,7 @@ int leerValor(TMV *mv, TOperando op) {
     if (mv->ErrorFlag) return;
     switch (op.tipo) {
         case 1: { // Registro
-            int valor = mv->registros[op.registro];
+            int valor = mv->registros[(int)op.registro];
             switch (op.segmentoReg) {
                 case 0: {
                     //printf("LV reg: Leer REGISTRO: %d\n", valor);
@@ -77,7 +77,7 @@ int leerValor(TMV *mv, TOperando op) {
                 selector = 1;
                 offset_registro = 0;
             } else {
-                int contenido = mv->registros[op.registro];
+                int contenido = mv->registros[(int)op.registro];
                 selector = contenido >> 16;
                 offset_registro = contenido & 0xFFFF;
             }
@@ -106,6 +106,7 @@ int leerValor(TMV *mv, TOperando op) {
             break;
         }
     }
+    return 0;
 }
 
 void escribirValor(TMV *mv, TOperando op, int valor) {
@@ -113,7 +114,7 @@ void escribirValor(TMV *mv, TOperando op, int valor) {
     // No se escribe en inmediatos ni operandos vacios
     switch (op.tipo) {
         case 1: { // Registro
-            int *reg = &mv->registros[op.registro];
+            int *reg = &mv->registros[(int)op.registro];
             //printf("TEST ESCRIBO REG, valor: %d , segmentOp: %d, tipo: %d \n\n", valor, op.segmentoReg, op.tipo);
             switch (op.segmentoReg) {
                 case 0:                                             // Registro completo (EAX)
@@ -143,7 +144,7 @@ void escribirValor(TMV *mv, TOperando op, int valor) {
                 selector = 1;
                 offset_registro = 0;
             } else {
-                int contenido = mv->registros[op.registro];
+                int contenido = mv->registros[(int)op.registro];
                 selector = contenido >> 16;
                 offset_registro = contenido & 0xFFFF;
             }
@@ -266,11 +267,6 @@ void escribirEnPantalla(TMV *mv) { //Imprimir
                 valor = (mv->memoria[direccion] << 8) | mv->memoria[direccion + 1];
             }
             else if (tam == 4) {
-                /*valor = (mv->memoria[direccion]     << 24) |
-                        (mv->memoria[direccion + 1] << 16) |
-                        (mv->memoria[direccion + 2] << 8)  |
-                        mv->memoria[direccion + 3];
-                        */
                 unsigned char byte1 = (unsigned char) mv->memoria[direccion];
                 unsigned char byte2 = (unsigned char) mv->memoria[direccion + 1];
                 unsigned char byte3 = (unsigned char) mv->memoria[direccion + 2];
@@ -283,13 +279,15 @@ void escribirEnPantalla(TMV *mv) { //Imprimir
             //printf("[%.4X]: ", direccion);
 
             if (modo & 0x10 || modo & 0x01) {
-                printf("[%.4X] | %d (0x%X)", direccion, valor, valor);
-            } else if (modo & 0x08) {
+                printf("[%.4X] | %d", direccion, valor);
+            }
+            if (modo & 0x08) {
                 printf("[%.4X] | 0x%X", direccion, valor);
-            } else if (modo & 0x04) {
+            }
+            if (modo & 0x04) {
                 printf("[%.4X] | 0o%o", direccion, valor);
-            } else if (modo & 0x02) {
-
+            }
+            if (modo & 0x02) {
                 if (valor >= 32 && valor <= 126)
                     printf("[%.4X] | %c", direccion, valor);
                 else

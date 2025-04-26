@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include "MVTipos.h"
 #include "Operaciones.h"
 #include "Funciones.h"
@@ -8,6 +9,7 @@
 void DecodificarInstruccion(char instruccion,char *operando1,char *operando2,char *operacion, int *ErrorFlag);
 TInstruccion LeerInstruccionCompleta(TMV *MV, int ip);
 void reportEstado(int estado);
+int esIPValida(TMV *mv);
 
 int main(int argc, char *argv[]){
 
@@ -64,13 +66,9 @@ int main(int argc, char *argv[]){
     if (modoDisassembler) {
         printf("\n>> Codigo assembler cargado en memoria:\n");
         int ipTemp = 0;
-        int Band = 0;
-        while (ipTemp < tamCod && !Band) {
+        while (ipTemp < tamCod) {
             TInstruccion inst = LeerInstruccionCompleta(&MV, ipTemp);
             MostrarInstruccion(inst, MV.memoria);
-            if (inst.codOperacion == 0x0F) {
-                Band = 1;
-            }
             ipTemp += inst.tamanio;
         }
         printf(" Error flag %d\n\n", MV.ErrorFlag);
@@ -103,7 +101,7 @@ int main(int argc, char *argv[]){
                 BandStop = 1;
             } else {
                 //printf("\n");
-                //printf("IP ACTUAL: %d: \n", ipActual);
+                //printf("\nIP ACTUAL: %d: \n", ipActual);
                 //MostrarInstruccion(InstruccionActual, MV.memoria);
                 procesarInstruccion(&MV, InstruccionActual);
                 //imprimirEstado(&MV);
