@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <ctype.h>
 #include <string.h>
 #include "MVTipos.h"
 #include "Operaciones.h"
@@ -8,49 +9,76 @@
 
 void DecodificarInstruccion(char instruccion,char *operando1,char *operando2,char *operacion, int *ErrorFlag);
 TInstruccion LeerInstruccionCompleta(TMV *MV, int ip);
-void reportEstado(int estado);
 int esIPValida(TMV *mv);
+void reportEstado(int estado);
+TArgs parsearArgumentos(int argc, char *argv[]);
+int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod, size_t memBytes, TArgs args);
+void configurarSegmentos(TMV *mv, TArgs args, unsigned short tamConst, unsigned short tamCode, unsigned short tamData, unsigned short tamExtra, unsigned short tamStack, unsigned short entryOffset);
 
 int main(int argc, char *argv[]){
 
-    FILE *archBinario;
+    FILE *archVmx;
+    FILE *archImagen;
     TMV MV;
     MV.ErrorFlag = 0;
-    int modoDisassembler = 0;
     int BandStop = 0;
-    char *nombreArchivo = NULL;
     TInstruccion InstruccionActual;                         // Para cargar la instruccion act
     unsigned int ipActual;                                  // Instruction Pointer
     int tamCod;                                             // Para leer el tamanio del codigo
-    char *header =(char *)malloc(sizeof(char) * 6);         // 0 - 4 Identificador "VMX25"
-                                                            // 5 Version "1"
-                                                            // 6 - 7 Tamanio del codigo
 
-    // MODO DISASSEMBLER
-    for (int i = 1; i < argc; i++) {                        //argc (argument count)
-        if (strcmp(argv[i], "-d") == 0) {                   //argv[] (argument vector)
-            modoDisassembler = 1;
-        } else {
-            nombreArchivo = argv[i];                        // El primer argumento que no sea -d es el archivo
-        }
+    //Lectura argumentos de la Consola
+    TArgs args = parsearArgumentos(argc, argv);
+
+    if (!args.nombreArchVmx && !args.nombreArchVmi) {
+        printf(">> Error: se requiere al menos .vmx o .vmi\n");
+        return 1;
     }
-    if (nombreArchivo == NULL) {
-        fprintf(stderr, ">> Error: debe especificar el archivo .vmx a ejecutar.\n");
-        fprintf(stderr, "Uso: %s [-d] archivo.vmx\n", argv[0]);
+    if (!args.nombreArchVmx && args.cantidadParametros > 0) {
+        printf("Aviso: sin .vmx, se ignoran %d parámetro(s)\n",args.cantidadParametros);
+        free(args.parametros);
+        args.parametros = NULL;
+        args.cantidadParametros = 0;
+    }
+    printf("VMX: %s\n", args.nombreArchVmx ? args.nombreArchVmx : "(ninguno)");
+    printf("VMI: %s\n", args.nombreArchVmi ? args.nombreArchVmi : "(ninguno)");
+    printf("Memoria: %d KiB\n", args.tamMemoriaKiB);
+    if (args.cantidadParametros) {
+        printf("Parametros (%d): ", args.cantidadParametros);
+        for (int i = 0; i < args.cantidadParametros; i++)
+            printf("%s ", args.parametros[i]);
+        printf("\n");
+    }
+
+    //Setear la memoria dinamica
+    size_t memBytes = args.tamMemoriaKiB * 1024;
+    MV.memoria = malloc(memBytes);
+    if (!MV.memoria) {
+        printf(">> Error: no se pudo reservar %lu bytes de memoria\n",(unsigned long)memBytes);
         return 1;
     }
 
-    // Cargo en memoria
-    archBinario = fopen(nombreArchivo, "rb");
-    if (!archBinario) {
-        fprintf(stderr, ">> Error: no se pudo abrir el archivo '%s'\n", nombreArchivo);
-        return 1;
+    // Lectura del Vmx
+    if (args.nombreArchVmx) {
+        int err = cargarArchivoVMX(args.nombreArchVmx, &MV, &tamCod, memBytes, args);
+        if (err) //despues planteo mensaje de posibles errores
+            return err;
     }
-    fread(header, sizeof(char), 6, archBinario);                    // Obtengo el header (6 bytes)
-    unsigned char high, low;
-    fread(&high, sizeof(char), 1, archBinario);
-    fread(&low, sizeof(char), 1, archBinario);
-    tamCod = (high << 8) | low;
+
+    ipActual = MV.registros[IP];
+
+    //Lectura imagen...
+
+
+
+
+
+
+
+
+
+
+    // CODIGO VIEJO DESPUES ACTUALIZO!
+
 
     MV.TDS[0] = (0 << 16) | tamCod;                                 // Segmento de código: base = 0, tamaño = tamCod
     MV.TDS[1] = ((unsigned int)tamCod << 16) | (16384 - tamCod);    // Segmento de datos: base = tamCod, tamaño restante
@@ -59,10 +87,11 @@ int main(int argc, char *argv[]){
     MV.registros[DS] = (1 << 16);                                   // DS = 0x00010000 -> segmento 1, offset 0
     MV.registros[IP] = MV.registros[CS];                            // IP apunta a inicio del segmento de código
 
-    fread(MV.memoria, sizeof(char), tamCod, archBinario);           // Carga la totalidad del codigo
-    fclose(archBinario);
+    //fread(MV.memoria, sizeof(char), tamCod, archBinario);           // Carga la totalidad del codigo
+    //fclose(archBinario);
 
     // Imprimo Disassembler
+    /*
     if (modoDisassembler) {
         printf("\n>> Codigo assembler cargado en memoria:\n");
         int ipTemp = 0;
@@ -80,7 +109,7 @@ int main(int argc, char *argv[]){
             printf("\nAdvertencia: STOP no presente en el codigo Assembler\n");
         }
     }
-
+    */
     // Reiniciar el Instruction Pointer despues de recorrer
     MV.registros[CS] = (0 << 16);                                   // CS = 0x00000000 -> segmento 0, offset 0
     MV.registros[DS] = (1 << 16);                                   // DS = 0x00010000 -> segmento 1, offset 0
@@ -126,7 +155,8 @@ int main(int argc, char *argv[]){
     }
 
     reportEstado(MV.ErrorFlag);
-    free(header);
+    free(MV.memoria);
+
     return 0;
 }
 
@@ -255,8 +285,7 @@ int esIPValida(TMV *mv) {
     return (ip >= base && ip < base + tam);
 }
 
-void reportEstado(int estado)
-{
+void reportEstado(int estado){
     switch(estado)
     {
         case 0: printf("\n\n>> EJECUCION EXITOSA");
@@ -271,3 +300,233 @@ void reportEstado(int estado)
         break;
    }
 }
+
+TArgs parsearArgumentos(int argc, char *argv[]) {
+    TArgs a = {0};
+    a.nombreArchVmx       = NULL;   // Nombre de archivo .vmx (o NULL)
+    a.nombreArchVmi       = NULL;   // Nombre de archivo .vmi (o NULL)
+    a.tamMemoriaKiB       = 16;     // 16 KiB por defecto
+    a.modoDisassembler    = 0;      // Flag -d: deshabilitado
+    a.parametros          = NULL;   // Array de parámetros
+    a.cantidadParametros  = 0;      // Cantidad de parámetros
+
+    int parsingParams = 0;          // Se activa tras "-p"
+
+    for (int i = 1; i < argc; i++) {
+        // Si ya vimos "-p", todos los argv[i] siguientes son parámetros
+        if (parsingParams) {
+            a.parametros = realloc(a.parametros, sizeof(char*) * (a.cantidadParametros + 1));
+            a.parametros[a.cantidadParametros++] = argv[i];
+            continue;
+        }
+
+        // 1) Modo desensamblador ("-d")
+        if (strcmp(argv[i], "-d") == 0) {
+            a.modoDisassembler = 1;
+            continue;
+        }
+
+        // 2) Tamaño de memoria ("m=M")
+        if (strncmp(argv[i], "m=", 2) == 0) {
+            char *num = argv[i] + 2;
+            int valido = 1;
+            for (char *p = num; *p; p++) {
+                if (!isdigit(*p)) { valido = 0; break; }
+            }
+            if (valido) {
+                a.tamMemoriaKiB = atoi(num);
+            } else {
+                fprintf(stderr,"Aviso: 'm=%s' inválido, usando 16 KiB\n", num);
+            }
+            continue;
+        }
+
+        // 3) Inicio de parámetros ("-p")
+        if (strcmp(argv[i], "-p") == 0) {
+            parsingParams = 1;
+            continue;
+        }
+
+        // 4) Archivo .vmx
+        size_t len = strlen(argv[i]);
+        if (len > 4 && strcmp(argv[i] + len - 4, ".vmx") == 0) {
+            a.nombreArchVmx = argv[i];
+            continue;
+        }
+
+        // 5) Archivo .vmi
+        if (len > 4 && strcmp(argv[i] + len - 4, ".vmi") == 0) {
+            a.nombreArchVmi = argv[i];
+            continue;
+        }
+
+        // 6) Argumento desconocido
+        fprintf(stderr, "Advertencia: argumento desconocido '%s'\n", argv[i]);
+    }
+
+    return a;
+}
+
+int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod, size_t memBytes, TArgs args) {
+    FILE *archVmx = fopen(nombreArch, "rb");
+    if (!archVmx) {
+        printf("\n>> Error: no se pudo abrir '%s'\n", nombreArch);
+        return 1;
+    }
+
+    // Leer identificador "VMX25" (5 bytes) y version (1 byte)
+    char identificador[5];
+    char version;
+    fread(identificador, 1, 5, archVmx);
+    fread(&version, sizeof(version), 1, archVmx);
+
+    // Variables para tamaños y bytes temporales, tal vez despues lo guarde en un registro especial
+    unsigned short tamCode = -1, tamData = -1, tamExtra = -1;
+    unsigned short tamStack = -1, tamConst = -1, entryOffset = -1;
+    unsigned char high, low;
+
+    if (version == 1) {
+        // v1 solo tiene CodeSize en bytes 6-7
+        fread(&high, sizeof(high), 1, archVmx);
+        fread(&low,  sizeof(low),  1, archVmx);
+        tamCode = (high << 8) | low;
+        *tamCod = tamCode;
+        tamData  = (unsigned int)(memBytes - tamCode);
+    }
+    else {
+        // v2: Code, Data, Extra, Stack, Const, Entry
+        fread(&high, sizeof(high), 1, archVmx);
+        fread(&low,  sizeof(low),  1, archVmx);
+        tamCode = (high << 8) | low;
+        *tamCod = tamCode;
+
+        fread(&high, sizeof(high), 1, archVmx);
+        fread(&low,  sizeof(low),  1, archVmx);
+        tamData = (high << 8) | low;
+
+        fread(&high, sizeof(high), 1, archVmx);
+        fread(&low,  sizeof(low),  1, archVmx);
+        tamExtra = (high << 8) | low;
+
+        fread(&high, sizeof(high), 1, archVmx);
+        fread(&low,  sizeof(low),  1, archVmx);
+        tamStack = (high << 8) | low;
+
+        fread(&high, sizeof(high), 1, archVmx);
+        fread(&low,  sizeof(low),  1, archVmx);
+        tamConst = (high << 8) | low;
+
+        fread(&high, sizeof(high), 1, archVmx);
+        fread(&low,  sizeof(low),  1, archVmx);
+        entryOffset = (high << 8) | low;
+    }
+
+    // Validar que CodeSegment entre en la memoria
+    if (tamCode > memBytes) {
+        printf("\n>> Error: Codigo (%u bytes) excede memoria (%lu bytes)\n",tamCode, (unsigned long)memBytes);
+        fclose(archVmx);
+        return 2;
+    }
+
+    // Cargar la totalidad del CodeSegment
+    fread(MV->memoria, 1, tamCode, archVmx);
+    fclose(archVmx);
+
+    // Configurar todos los segmentos y TDS
+    configurarSegmentos(MV, args, tamConst, tamCode, tamData, tamExtra, tamStack, entryOffset);
+
+    return 0;
+}
+
+void configurarSegmentos(TMV *mv, TArgs args, unsigned short tamConst, unsigned short tamCode, unsigned short tamData, unsigned short tamExtra, unsigned short tamStack, unsigned short entryOffset){
+    size_t base = 0;     // dirección fisica donde empieza el proximo segmento
+    int    idx  = 0;     // indice en mv->TDS para la siguiente entrada
+
+    int idxParam = -1, idxConst = -1, idxCode = -1;
+    int idxData  = -1, idxExtra = -1, idxStack = -1;
+
+    // Param Segment (solo si hay parametros en args)
+    if (args.cantidadParametros > 0) {
+        // 1) Copiar cada string y almacenar sus offsets
+        unsigned short offsets[args.cantidadParametros];
+        size_t pos = 0;      // desplazamiento relativo dentro de Param Segment
+
+        for (int i = 0; i < args.cantidadParametros; i++) {
+            size_t L = strlen(args.parametros[i]) + 1;  // longitud con '\0'
+            // copia el string al bloque de memoria en [base+pos ...]
+            memcpy(mv->memoria + base + pos,args.parametros[i],L);
+            offsets[i] = (unsigned short)pos;
+            pos += L;
+        }
+
+        // 2) Construir el arreglo argv de punteros (4 bytes c/u)
+        size_t startPtrs = pos;
+        for (int i = 0; i < args.cantidadParametros; i++) {
+            // selector=0 (Param Segment), offset = offsets[i]
+            uint32_t ptrVal = (0 << 16) | offsets[i];
+            size_t  off    = base + startPtrs + i * 4;
+            // escribir en big-endian
+            mv->memoria[off + 0] = (ptrVal >> 24) & 0xFF;
+            mv->memoria[off + 1] = (ptrVal >> 16) & 0xFF;
+            mv->memoria[off + 2] = (ptrVal >>  8) & 0xFF;
+            mv->memoria[off + 3] = (ptrVal >>  0) & 0xFF;
+        }
+
+        // 3) Calcular tamaño total del Param Segment
+        unsigned short tamParam = (unsigned short)(pos + args.cantidadParametros * 4);
+
+        // 4) Registrar en la TDS
+        idxParam = idx;
+        mv->TDS[idx++] = ((unsigned int)base << 16) | tamParam;
+        base += tamParam;
+    }
+
+    // Const Segment
+    if (tamConst > 0) {
+        idxConst = idx;
+        mv->TDS[idx++] = ((unsigned int)base << 16) | tamConst;
+        base += tamConst;
+    }
+
+    // Code Segment
+    idxCode = idx;
+    mv->TDS[idx++] = ((unsigned int)base << 16) | tamCode;
+    base += tamCode;
+
+    // Data Segment
+    if (tamData > 0) {
+        idxData = idx;
+        mv->TDS[idx++] = ((unsigned int)base << 16) | tamData;
+        base += tamData;
+    }
+
+    // Extra Segment
+    if (tamExtra > 0) {
+        idxExtra = idx;
+        mv->TDS[idx++] = ((unsigned int)base << 16) | tamExtra;
+        base += tamExtra;
+    }
+
+    // Stack Segment
+    if (tamStack > 0) {
+        idxStack = idx;
+        mv->TDS[idx++] = ((unsigned int)base << 16) | tamStack;
+        base += tamStack;
+    }
+
+    // Ajustamos los registros de segmentos
+    // Cada registro de segmento (CS, DS, ES, SS, KS) apunta al selector
+    // igual al indice en la TDS, offset = 0.
+    if (idxCode  >= 0) mv->registros[CS] = ((unsigned int)idxCode  << 16);
+    if (idxData  >= 0) mv->registros[DS] = ((unsigned int)idxData  << 16);
+    if (idxExtra >= 0) mv->registros[ES] = ((unsigned int)idxExtra << 16);
+    if (idxStack >= 0) mv->registros[SS] = ((unsigned int)idxStack << 16);
+    if (idxConst >= 0) mv->registros[KS] = ((unsigned int)idxConst << 16);
+
+    // SP = selector SS, offset = tamaño del Stack Segment
+    if (idxStack >= 0) mv->registros[SP] = ((unsigned int)idxStack << 16) | tamStack;
+
+    // Inicializamos IP: selector = idxCode, offset = entryOffset
+    mv->registros[IP] = ((unsigned int)idxCode << 16) | entryOffset;
+}
+

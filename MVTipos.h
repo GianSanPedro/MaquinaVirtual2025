@@ -1,6 +1,11 @@
 #define CS  0
 #define DS  1
+#define ES  2
+#define SS  3
+#define KS  4
 #define IP  5
+#define SP  6
+#define BP  7
 #define CC  8
 #define AC  9
 #define EAX  10
@@ -12,7 +17,7 @@
 
 typedef char instruccion;
 typedef struct{
-    char memoria[16384];            // Memoria principal (RAM) de 16 KiB
+    char *memoria;                  // Memoria principal (RAM), asignada dinamicamente
     int TDS[8];                     // Tabla de Descriptores de Segmentos
     unsigned int registros[16];     // 16 registros de 4 bytes (se utilizan 11 en esta primera parte)
     int ErrorFlag;                  // Bandera para detectar errores
@@ -34,3 +39,11 @@ typedef struct {
     int ipInicial;        // Dirección en memoria donde comienza la instrucción
 } TInstruccion;
 
+typedef struct {
+    char   *nombreArchVmx;          // NULL si no viene .vmx
+    char   *nombreArchVmi;          // NULL si no viene .vmi
+    int    tamMemoriaKiB;           // por defecto 16
+    int    modoDisassembler;        // 0 = off, 1 = on
+    char   **parametros;            // NULL si no hay -p
+    int    cantidadParametros;      // 0 si no hay -p
+} TArgs;
