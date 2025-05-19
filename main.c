@@ -15,6 +15,7 @@ TArgs parsearArgumentos(int argc, char *argv[]);
 int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod, size_t memBytes, TArgs args);
 void configurarSegmentos(TMV *mv, TArgs args, unsigned short tamConst, unsigned short tamCode, unsigned short tamData, unsigned short tamExtra, unsigned short tamStack, unsigned short entryOffset);
 int cargarImagenVMI(const char *nombreImagen, TMV *MV, int *tamCod, size_t *memBytesOut);
+void ejecutarDisassembler(const TMV *mv, int tamCod);
 
 int main(int argc, char *argv[]){
 
@@ -58,72 +59,30 @@ int main(int argc, char *argv[]){
         return 1;
     }
 
-    // Lectura del Vmx
-    if (args.nombreArchVmx) {
+    // Caso A: Solo Imagen .vmi
+    if (!args.nombreArchVmx && args.nombreArchVmi) {
+        int err = cargarImagenVMI(args.nombreArchVmi, &MV, &tamCod, &memBytes);
+        if (err)
+            return err;
+    }
+    else{
+        // Caso B: Tenemos .vmx y opcionalmente .vmi para depuracion mas adelante
         int err = cargarArchivoVMX(args.nombreArchVmx, &MV, &tamCod, memBytes, args);
         if (err) //despues planteo mensaje de posibles errores
             return err;
     }
 
-    ipActual = MV.registros[IP];
-
-    //Lectura del Vmi
-
-    if (args.nombreArchVmx) {
-        int err = cargarImagenVMI(args.nombreArchVmi, &MV, &tamCod, &memBytes);
-        if (err) //despues planteo mensaje de posibles errores
-            return err;
-    }
-
-    //Ejecucion...
-
-
-
-
-
-
     // CODIGO VIEJO DESPUES ACTUALIZO!
 
-
-    MV.TDS[0] = (0 << 16) | tamCod;                                 // Segmento de código: base = 0, tamaño = tamCod
-    MV.TDS[1] = ((unsigned int)tamCod << 16) | (16384 - tamCod);    // Segmento de datos: base = tamCod, tamaño restante
-
-    MV.registros[CS] = (0 << 16);                                   // CS = 0x00000000 -> segmento 0, offset 0
-    MV.registros[DS] = (1 << 16);                                   // DS = 0x00010000 -> segmento 1, offset 0
-    MV.registros[IP] = MV.registros[CS];                            // IP apunta a inicio del segmento de código
-
-    //fread(MV.memoria, sizeof(char), tamCod, archBinario);           // Carga la totalidad del codigo
-    //fclose(archBinario);
-
     // Imprimo Disassembler
-    /*
-    if (modoDisassembler) {
-        printf("\n>> Codigo assembler cargado en memoria:\n");
-        int ipTemp = 0;
-        int hayStop = 0;
-        while (ipTemp < tamCod) {
-            TInstruccion inst = LeerInstruccionCompleta(&MV, ipTemp);
-            if (inst.codOperacion == 0x0F){
-                    hayStop = 1;
-            }
-            MostrarInstruccion(inst, MV.memoria);
-            ipTemp += inst.tamanio;
-        }
-        printf("\nError flag %d\n", MV.ErrorFlag);
-        if (!hayStop){
-            printf("\nAdvertencia: STOP no presente en el codigo Assembler\n");
-        }
+    if (args.modoDisassembler) {
+        ejecutarDisassembler(&MV, tamCod);
     }
-    */
-    // Reiniciar el Instruction Pointer despues de recorrer
-    MV.registros[CS] = (0 << 16);                                   // CS = 0x00000000 -> segmento 0, offset 0
-    MV.registros[DS] = (1 << 16);                                   // DS = 0x00010000 -> segmento 1, offset 0
-    MV.registros[IP] = MV.registros[CS];                            // IP apunta a inicio del segmento de código
 
     //Comienza la ejecucion
     printf("\n>> Tamanio codigo: %d\n", tamCod);
     printf("\n>> Tabla de Segmentos seteada\n");
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 7; i++) {
         int base = MV.TDS[i] >> 16;
         int limite = MV.TDS[i] & 0xFFFF;
         printf("TDS[%d] -> base: %d (0x%04X), tamanio: %d (0x%04X)\n", i, base, base, limite, limite);
@@ -161,7 +120,6 @@ int main(int argc, char *argv[]){
 
     reportEstado(MV.ErrorFlag);
     free(MV.memoria);
-
     return 0;
 }
 
@@ -607,7 +565,34 @@ int cargarImagenVMI(const char *nombreImagen, TMV *MV, int *tamCod, size_t *memB
     return 0;
 }
 
+void ejecutarDisassembler(const TMV *MV, int tamCod) {
+    printf("\n>> Código assembler cargado en memoria:\n");
 
+    // Calculamos la direccion fisica inicial del Code Segment
+    unsigned int csReg   = MV->registros[CS];
+    unsigned int selCS   = csReg >> 16;              // selector
+    unsigned int offCS   = csReg & 0xFFFF;           // offset (normalmente 0 al iniciar)
+    unsigned int baseCS  = MV->TDS[selCS] >> 16;      // base fisica del segmento
+    unsigned int inicio  = baseCS + offCS;           // inicio en MV memoria
+    unsigned int finCS   = baseCS + tamCod;          // fin (no inclusive)
+
+    int ipTemp = inicio;
+    int hayStop = 0;
+
+    while (ipTemp < (int)finCS) {                    //sino salta warning tipos...
+        TInstruccion inst = LeerInstruccionCompleta(&MV, ipTemp);
+        if (inst.codOperacion == 0x0F) {
+            hayStop = 1;
+        }
+        MostrarInstruccion(inst, MV->memoria);
+        ipTemp += inst.tamanio;
+    }
+
+    printf("\nError flag %d\n", MV->ErrorFlag);
+    if (!hayStop) {
+        printf("\nAdvertencia: STOP no presente en el código Assembler\n");
+    }
+}
 
 
 
