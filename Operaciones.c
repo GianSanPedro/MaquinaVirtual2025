@@ -170,7 +170,7 @@ void procesarInstruccion(TMV *mv, TInstruccion inst) {
         case 0x08: NOT(mv, inst.op1); break;
         case 0x0B:
             if (mv->version == 2) {
-                //PUSH(mv, inst.op1);
+                PUSH(mv, inst.op1);
             } else {
                 printf("ERROR: Trata de ejecutar PUSH en una MV1 : [%.4X] (%d)\n", mv->registros[IP], mv->registros[IP]);
                 mv->ErrorFlag = 1;
@@ -178,7 +178,7 @@ void procesarInstruccion(TMV *mv, TInstruccion inst) {
             break;
         case 0x0C:
             if (mv->version == 2) {
-                //POP(mv, inst.op1);
+                POP(mv, inst.op1);
             } else {
                 printf("ERROR: Trata de ejecutar POP en una MV1 : [%.4X] (%d)\n", mv->registros[IP], mv->registros[IP]);
                 mv->ErrorFlag = 1;
@@ -186,7 +186,7 @@ void procesarInstruccion(TMV *mv, TInstruccion inst) {
             break;
         case 0x0D:
             if (mv->version == 2) {
-                //CALL(mv, inst.op1);
+                CALL(mv, inst.op1);
             } else {
                 printf("ERROR: Trata de ejecutar CALL en una MV1 : [%.4X] (%d)\n", mv->registros[IP], mv->registros[IP]);
                 mv->ErrorFlag = 1;
@@ -196,7 +196,7 @@ void procesarInstruccion(TMV *mv, TInstruccion inst) {
         // Instruccion SIN operandos
         case 0x0E:
             if (mv->version == 2) {
-                //RET(mv, inst.op1);
+                RET(mv, inst.op1);
             } else {
                 printf("ERROR: Trata de ejecutar RET en una MV1 : [%.4X] (%d)\n", mv->registros[IP], mv->registros[IP]);
                 mv->ErrorFlag = 1;

@@ -10,6 +10,14 @@ void escribirEnPantalla(TMV *mv);
 
 int esDireccionValida(TMV *mv, int selector, int direccion, int tam);
 
+void leerString(TMV *mv);
+
+void escribirString(TMV *mv);
+
+void limpiarPantalla();
+
+
+
 void MOV(TMV *mv, TOperando op1, TOperando op2);
 
 void ADD(TMV *mv, TOperando op1, TOperando op2);
@@ -57,5 +65,13 @@ void JNP(TMV *mv, TOperando op1);
 void JNN(TMV *mv, TOperando op1);
 
 void NOT(TMV *mv, TOperando op1);
+
+void PUSH(TMV *mv, TOperando op1);
+
+void POP(TMV *mv, TOperando op1);
+
+void CALL(TMV *mv, TOperando op1);
+
+void RET(TMV *mv, TOperando op1);
 
 void imprimirRegistrosGenerales(TMV *mv);

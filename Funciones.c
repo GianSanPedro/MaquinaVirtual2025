@@ -363,6 +363,65 @@ int esDireccionValida(TMV *mv, int selector, int direccion, int tam) {
     return 1; // Direccion valida
 }
 
+void leerString(TMV *mv) {
+    // Obtengo la direccion de inicio desde EDX
+    uint32_t edxVal = mv->registros[EDX];
+    uint16_t selector = edxVal >> 16;
+    int32_t  offset = edxVal & 0xFFFF;
+    uint32_t base = mv->TDS[selector] >> 16;
+    uint32_t addr = base + offset;
+
+    // Limite segun CX, si CX == 0xFFFF (-1) no limitamos la lectura
+    int32_t ecxVal = mv->registros[ECX];
+    int16_t limite = (int16_t)(ecxVal & 0xFFFF);
+    int unlimited  = (limite == (int16_t)-1);
+
+    // Leemos caracteres hasta '\n', EOF o alcanzar el maximo
+    int contador = 0;
+    int c;
+    // REVISAR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    while ( ((c = getchar()) != '\n') && (c != EOF) && (unlimited || contador < limite)) {
+        mv->memoria[addr + contador++] = (unsigned char)c;
+    }
+
+    // Escribimos el terminador nulo
+    mv->memoria[addr + contador] = '\0';
+}
+
+void escribirString(TMV *mv) {
+    // Obtengo la direccion inicial desde EDX
+    uint32_t edxVal   = mv->registros[EDX];
+    uint16_t selector = edxVal >> 16;
+    uint16_t offset   = edxVal & 0xFFFF;
+    uint32_t base     = mv->TDS[selector] >> 16;
+    uint32_t addr     = base + offset;
+
+    // Recorro la memoria hasta el terminador '\0'
+    unsigned char c;
+    while ((c = mv->memoria[addr++]) != '\0') {
+        putchar(c);
+    }
+}
+
+void limpiarPantalla() {
+    // Codigo ANSI:
+    //  \x1B[2J  → borra toda la pantalla
+    //  \x1B[H   → mueve el cursor a la posición (1,1)
+    printf("\x1B[2J\x1B[H");
+    fflush(stdout);
+}
+
+
+
+
+
+
+
+
+
+
+
+
 void MOV(TMV *mv, TOperando op1, TOperando op2) {
     int valor = leerValor(mv, op2);
     escribirValor(mv, op1, valor);
@@ -540,8 +599,12 @@ void SYS(TMV *mv, TOperando op1) {
     int syscall_id = leerValor(mv, op1);
 
     switch (syscall_id) {
-        case 1: leerDesdeTeclado(mv); break;
-        case 2: escribirEnPantalla(mv); break;
+        case 1: leerDesdeTeclado(mv); break;        //READ
+        case 2: escribirEnPantalla(mv); break;      //WRITE
+        case 3: leerString(mv); break;              //STRING READ
+        case 4: escribirString(mv); break;          //STRING WRITE
+        case 7: limpiarPantalla(); break;         //CLEAR SCREEN
+        //case 15: escribirEnPantalla(mv); break;      //BREAKPOINT
         default:
             printf("Error: Llamada al sistema no valida: SYS %d   valor: %d\n", syscall_id, op1.valor);
             mv->ErrorFlag = 4;
