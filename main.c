@@ -16,6 +16,7 @@ int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod, TArgs args);
 void configurarSegmentos(TMV *mv, TArgs args, unsigned short tamConst, unsigned short tamCode, unsigned short tamData, unsigned short tamExtra, unsigned short tamStack, unsigned short entryOffset);
 int cargarImagenVMI(const char *nombreImagen, TMV *MV, int *tamCod);
 void ejecutarDisassembler(const TMV *mv, int tamCod);
+void initSubRutinaPrincipal(TMV *mv, TArgs args);
 
 int main(int argc, char *argv[]){
 
@@ -435,6 +436,10 @@ int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod, TArgs args) {
     // Configurar todos los segmentos y TDS
     configurarSegmentos(MV, args, tamConst, tamCode, tamData, tamExtra, tamStack, entryOffset);
 
+    if ( MV->version == 2){
+        initSubRutinaPrincipal(MV, args);
+    }
+
     return 0;
 }
 
@@ -454,7 +459,7 @@ void configurarSegmentos(TMV *mv, TArgs args, unsigned short tamConst, unsigned 
     mv->registros[SP] = 0xFFFFFFFF;
 
     // Param Segment (solo si hay parametros en args)
-    if (args.cantidadParametros > 0) {
+    if (args.cantidadParametros > 0 && mv->version == 2) {
         // 1) Copiar cada string y almacenar sus offsets
         unsigned short offsets[args.cantidadParametros];
         size_t pos = 0;      // desplazamiento relativo dentro de Param Segment
@@ -629,8 +634,59 @@ void ejecutarDisassembler(const TMV *MV, int tamCod) {
     }
 }
 
+void initSubRutinaPrincipal(TMV *mv, TArgs args) {
+    // Leo el SP inicial (apunta al final del Stack Segment)
+    uint32_t spValue   = mv->registros[SP];
+    uint16_t selector  = spValue >> 16;       // selector del SS
+    int32_t  offset    = spValue & 0xFFFF;    // offset dentro del SS
 
+    // Base fisica del Stack Segment
+    uint32_t baseStack = mv->TDS[selector] >> 16;
 
+    // Preparamos los tres valores a apilar
+    int32_t valores[3];
+
+    // a) RET (-1) : 0xFFFFFFFF
+    valores[0] = -1;
+
+    // b) argc
+    valores[1] = args.cantidadParametros;
+
+    // c) argv puntero
+    if (args.cantidadParametros > 0) {
+        // El Param Segment es la entrada 0 de la TDS si hay parametros
+        uint16_t tamParam       = mv->TDS[0] & 0xFFFF;
+        uint16_t n              = args.cantidadParametros;
+        uint16_t offsetArgv     = tamParam - n * 4;
+        valores[2] = (0 << 16) | offsetArgv;
+    } else {
+        // sin parametros: puntero = -1
+        valores[2] = -1;
+    }
+
+    // Apilamos cada valor (big-endian y SP decrementa en 4)
+    for (int i = 0; i < 3; i++) {
+        offset -= 4;
+        if (offset < 0) {
+            printf("ERROR: Stack overflow al inicializar main en [%.4X]\n", mv->registros[IP]);
+            mv->ErrorFlag = 5;
+            return;
+        }
+
+        // actualizamos el SP con selector y nuevo offset
+        mv->registros[SP] = ((uint32_t)selector << 16) | ((uint16_t)offset & 0xFFFF);
+
+        // dirección fisica donde escribir
+        uint32_t addr = baseStack + offset;
+
+        // escribir en big-endian
+        int32_t v = valores[i];
+        mv->memoria[addr    ] = (v >> 24) & 0xFF;
+        mv->memoria[addr + 1] = (v >> 16) & 0xFF;
+        mv->memoria[addr + 2] = (v >>  8) & 0xFF;
+        mv->memoria[addr + 3] = (v >>  0) & 0xFF;
+    }
+}
 
 
 
