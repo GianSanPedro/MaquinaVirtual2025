@@ -91,12 +91,24 @@ void MostrarOperando(TOperando op) {
         printf("%d", op.valor);
 
     } else if (op.tipo == 3) { // Memoria
-        if (op.registro == DS) {
-            printf("[%d]", op.desplazamiento); // acceso absoluto a memoria DS
+        char prefijo;
+        if (op.tamCelda == 2)
+            prefijo = 'W';
+        else {
+            if (op.tamCelda == 3)
+                prefijo = 'B';
+            else {
+                if (op.tamCelda == 3)
+                    prefijo = 'L';
+            }
+        }
+
+        if (op.registro == DS) { //REVISAAAAAR!!!!!!!!!!!!!!!!!!
+            printf("%c[%d]", prefix, op.desplazamiento); // acceso absoluto a memoria DS
         } else if (op.registro >= 0 && op.registro < 16) {
-            printf("[%s+%d]", regNombres[(int)op.registro], op.desplazamiento);
+            printf("%c[%s+%d]", prefix, regNombres[(int)op.registro], op.desplazamiento);
         } else {
-            printf("[??+%d]", op.desplazamiento);
+            printf("%c[??+%d]", prefix, op.desplazamiento);
         }
     }
 }
@@ -156,6 +168,40 @@ void procesarInstruccion(TMV *mv, TInstruccion inst) {
         // Instrucciones de 1 operando
         case 0x00: SYS(mv, inst.op1); break;
         case 0x08: NOT(mv, inst.op1); break;
+        case 0x0B:
+            if (mv->version == 2) {
+                PUSH(mv, inst.op1);
+            } else {
+                printf("ERROR: Trata de ejecutar PUSH en una MV1 : [%.4X] (%d)\n", mv->registros[IP], mv->registros[IP]);
+                mv->ErrorFlag = 1;
+            }
+            break;
+        case 0x0C:
+            if (mv->version == 2) {
+                POP(mv, inst.op1);
+            } else {
+                printf("ERROR: Trata de ejecutar POP en una MV1 : [%.4X] (%d)\n", mv->registros[IP], mv->registros[IP]);
+                mv->ErrorFlag = 1;
+            }
+            break;
+        case 0x0D:
+            if (mv->version == 2) {
+                CALL(mv, inst.op1);
+            } else {
+                printf("ERROR: Trata de ejecutar CALL en una MV1 : [%.4X] (%d)\n", mv->registros[IP], mv->registros[IP]);
+                mv->ErrorFlag = 1;
+            }
+            break;
+
+        // Instruccion SIN operandos
+        case 0x0E:
+            if (mv->version == 2) {
+                RET(mv, inst.op1);
+            } else {
+                printf("ERROR: Trata de ejecutar RET en una MV1 : [%.4X] (%d)\n", mv->registros[IP], mv->registros[IP]);
+                mv->ErrorFlag = 1;
+            }
+            break;
 
         // Saltos (usan op1.valor como destino)
         case 0x01: JMP(mv, inst.op1); break;
@@ -171,10 +217,14 @@ void procesarInstruccion(TMV *mv, TInstruccion inst) {
         printf("Advertencia: IP fue modificado por una instruccion que no deberia: 0x%02X\n", inst.codOperacion);
     }
 
-
     // Verifico que los saltos no salgan del segmento
     if ((inst.codOperacion >= 0x01 && inst.codOperacion <= 0x07) && !esIPValida(mv)) {
         printf("ERROR: Salto IP fuera del Segmento de Codigo: [%.4X] (%d)\n", mv->registros[IP], mv->registros[IP]);
         mv->ErrorFlag = 2;
     }
 }
+
+
+
+
+

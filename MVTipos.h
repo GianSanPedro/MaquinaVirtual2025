@@ -21,6 +21,7 @@ typedef struct{
     int TDS[8];                     // Tabla de Descriptores de Segmentos
     unsigned int registros[16];     // 16 registros de 4 bytes (se utilizan 11 en esta primera parte)
     int ErrorFlag;                  // Bandera para detectar errores
+    char version;
 }TMV;
 
 typedef struct {
@@ -28,6 +29,7 @@ typedef struct {
     char registro;                  // código de registro (0–15) si aplica (registro o memoria)
     char segmentoReg;               // para tipo registro: 00=EAX, 01=AL, 10=AH, 11=AX
     unsigned short desplazamiento;  // para memoria (OffSet)
+    int tamCelda;                   // para memoria 0: long (l), 2: word (w), 3: byte (b)
     int valor;                      // para inmediato (o para lectura posterior)
 } TOperando;
 

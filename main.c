@@ -127,8 +127,8 @@ void DecodificarInstruccion(char instruccion,char *tipoOp1,char *tipoOp2,char *C
     //Como char instruccion lee solo 1 byte
     *CodOperacion = instruccion & 0x1F;  // 5 bits menos significativos
 
-    if (*CodOperacion == 0x0F) {
-        // Sin operandos (STOP)
+    if (*CodOperacion == 0x0F || *CodOperacion == 0x0E) {
+        // Sin operandos (STOP o RET)
         *tipoOp1 = 0;
         *tipoOp2 = 0;
     }
@@ -143,7 +143,7 @@ void DecodificarInstruccion(char instruccion,char *tipoOp1,char *tipoOp2,char *C
             printf("\n>> Tipo de operando A invalido\n");
         }
     }
-    else if (*CodOperacion <= 0x08) {
+    else if ((*CodOperacion <= 0x08)  || (*CodOperacion >= 0x0B && *CodOperacion <= 0x0D)) {
         // Un operando
         *tipoOp1 = (instruccion >> 6) & 0x03;  // bits 7-6
         *tipoOp2 = 0;
@@ -151,7 +151,7 @@ void DecodificarInstruccion(char instruccion,char *tipoOp1,char *tipoOp2,char *C
         // Validacion: bit 5 debe ser 0 (relleno)
         if (((instruccion >> 5) & 0x01) != 0) {
             *ErrorFlag = 1;
-            printf("\n>> El bit 5 de la instruccion debe ser 0 (relleno)\n");
+            printf("\n>> CodOp 1 operando: El bit 5 de la instruccion debe ser 0 (relleno)\n");
         }
     }
     else {
@@ -203,6 +203,7 @@ TInstruccion LeerInstruccionCompleta(TMV *MV, int ip) {
 
             unsigned char byte = (unsigned char) MV->memoria[cursor + 2];
             inst.op2.registro = (byte >> 4) & 0x0F;
+            inst.op2.tamCelda =  byte & 0x03;   // 00=4B, 10=2B, 11=1B
 
             cursor += 3;
             break;
@@ -231,6 +232,7 @@ TInstruccion LeerInstruccionCompleta(TMV *MV, int ip) {
 
             unsigned char byte = (unsigned char) MV->memoria[cursor + 2];
             inst.op1.registro = (byte >> 4) & 0x0F;
+            inst.op1.tamCelda =  byte & 0x03;   // 00=4B, 10=2B, 11=1B
 
             cursor += 3;
             break;
@@ -342,6 +344,7 @@ int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod, size_t memByt
     char version;
     fread(identificador, 1, 5, archVmx);
     fread(&version, sizeof(version), 1, archVmx);
+    MV->version = version;
 
     // Variables para tamaños y bytes temporales, tal vez despues lo guarde en un registro especial
     unsigned short tamCode = 0, tamData = 0, tamExtra = 0;
@@ -513,6 +516,7 @@ int cargarImagenVMI(const char *nombreImagen, TMV *MV, int *tamCod, size_t *memB
     unsigned char version;
     fread(identificador, sizeof(identificador), 1, arch);
     fread(&version,       sizeof(version),     1, arch);
+    MV->version = version;
 
     // Leo el tamaño de memoria (KiB)
     unsigned char high, low;
