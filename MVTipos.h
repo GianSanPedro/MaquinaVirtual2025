@@ -16,6 +16,16 @@
 #define EFX  15
 
 typedef char instruccion;
+
+typedef struct {
+    char   *nombreArchVmx;          // NULL si no viene .vmx
+    char   *nombreArchVmi;          // NULL si no viene .vmi
+    int    tamMemoriaKiB;           // por defecto 16
+    int    modoDisassembler;        // 0 = off, 1 = on
+    char   **parametros;            // NULL si no hay -p
+    int    cantidadParametros;      // 0 si no hay -p
+} TArgs;
+
 typedef struct{
     char *memoria;                  // Memoria principal (RAM), asignada dinamicamente
     int TDS[8];                     // Tabla de Descriptores de Segmentos
@@ -23,6 +33,9 @@ typedef struct{
     int ErrorFlag;                  // Bandera para detectar errores
     char version;
     size_t memSize;                 // Tamaño en bytes de la memoria
+    TArgs args;                     // parametros pasados al VM, necesito el vmi para breakPoint
+    int stepMode;                   // 1 = ejecuta 1 instrucción y vuelve al breakpoint; 0 = continuar
+    int Aborted;                    // 1 = el usuario pidio quit en breakpoint
 }TMV;
 
 typedef struct {
@@ -42,11 +55,4 @@ typedef struct {
     int ipInicial;                  // Dirección en memoria donde comienza la instrucción
 } TInstruccion;
 
-typedef struct {
-    char   *nombreArchVmx;          // NULL si no viene .vmx
-    char   *nombreArchVmi;          // NULL si no viene .vmi
-    int    tamMemoriaKiB;           // por defecto 16
-    int    modoDisassembler;        // 0 = off, 1 = on
-    char   **parametros;            // NULL si no hay -p
-    int    cantidadParametros;      // 0 si no hay -p
-} TArgs;
+

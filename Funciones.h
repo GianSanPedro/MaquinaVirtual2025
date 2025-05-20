@@ -16,7 +16,9 @@ void escribirString(TMV *mv);
 
 void limpiarPantalla();
 
+void breakPoint(TMV *mv);
 
+int generarImagenVMI(TMV *mv, const char *nombreImagen);
 
 void MOV(TMV *mv, TOperando op1, TOperando op2);
 

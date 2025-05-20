@@ -411,16 +411,98 @@ void limpiarPantalla() {
     fflush(stdout);
 }
 
+void breakPoint(TMV *mv) {
+    if (!mv->args.nombreArchVmi) {
+        return;  // ignoramos el breakpoint
+    }
 
+    // Generamos la imagen VMI
+    int err = generarImagenVMI(mv, mv->args.nombreArchVmi);
+    if (err) {
+        printf("ERROR: no se pudo generar imagen VMI '%s'\n", mv->args.nombreArchVmi);
+        mv->ErrorFlag = 10;
+        return;
+    }
+    printf(">>Breakpoint: imagen VMI generada en '%s'\n", mv->args.nombreArchVmi);
 
+    // El while se ejecuta hasta que el user ingrese una opcion valida!
+    // 'g' go, 'q' quit, Enter solo : step
+    while (1) {
+        printf("Breakpoint> (g=go, q=quit, Enter=step): ");
 
+        int ch = getchar();
+        // consumir resto de linea para no tener basura en el buffer
+        while (ch != '\n' && ch != EOF) ch = getchar();
 
+        if (ch == '\n') {
+            // step: ejecutar una instrucción mas y volver aqui
+            mv->stepMode = 1;
+            break;
+        }
+        else if (ch == 'g') {
+            // go: continuar hasta proximo breakpoint
+            mv->stepMode = 0;
+            break;
+        }
+        else if (ch == 'q') {
+            // quit: abortar la ejecucion
+            mv->Aborted = 1;
+            return;
+        }
+    }
+}
 
+int generarImagenVMI(TMV *mv, const char *nombreImagen) {
+    FILE *archImagen = fopen(nombreImagen, "wb");
+    if (!archImagen) {
+        printf("ERROR: no se pudo abrir imagen VMI '%s' para escritura\n", nombreImagen);
+        return 1;
+    }
 
+    // Header "VMI25" + versión
+    fwrite("VMI25", 1, 5, archImagen);
+    unsigned char version = 1;
+    fwrite(&version, 1, 1, archImagen);
 
+    // Memoria en KiB
+    unsigned short memKiB = (unsigned short)(mv->memSize / 1024);
+    unsigned char high = (memKiB >> 8) & 0xFF;
+    unsigned char low  = (memKiB >> 0) & 0xFF;
+    fwrite(&high, 1, 1, archImagen);
+    fwrite(&low,  1, 1, archImagen);
 
+    // Registros (16 × 4 bytes, big-endian)
+    for (int i = 0; i < 16; i++) {
+        uint32_t r = mv->registros[i];
+        unsigned char b0 = (r >> 24) & 0xFF;
+        unsigned char b1 = (r >> 16) & 0xFF;
+        unsigned char b2 = (r >>  8) & 0xFF;
+        unsigned char b3 = (r >>  0) & 0xFF;
+        fwrite(&b0, 1, 1, archImagen);
+        fwrite(&b1, 1, 1, archImagen);
+        fwrite(&b2, 1, 1, archImagen);
+        fwrite(&b3, 1, 1, archImagen);
+    }
 
+    // TDS (8 × 4 bytes, big-endian)
+    for (int j = 0; j < 8; j++) {
+        uint32_t desc = mv->TDS[j];
+        unsigned char b0 = (desc >> 24) & 0xFF;
+        unsigned char b1 = (desc >> 16) & 0xFF;
+        unsigned char b2 = (desc >>  8) & 0xFF;
+        unsigned char b3 = (desc >>  0) & 0xFF;
+        fwrite(&b0, 1, 1, archImagen);
+        fwrite(&b1, 1, 1, archImagen);
+        fwrite(&b2, 1, 1, archImagen);
+        fwrite(&b3, 1, 1, archImagen);
+    }
 
+    // Memoria principal
+    fwrite(mv->memoria, 1, mv->memSize, archImagen);
+
+    fclose(archImagen);
+    return 0;
+}
 
 void MOV(TMV *mv, TOperando op1, TOperando op2) {
     int valor = leerValor(mv, op2);
@@ -603,8 +685,8 @@ void SYS(TMV *mv, TOperando op1) {
         case 2: escribirEnPantalla(mv); break;      //WRITE
         case 3: leerString(mv); break;              //STRING READ
         case 4: escribirString(mv); break;          //STRING WRITE
-        case 7: limpiarPantalla(); break;         //CLEAR SCREEN
-        //case 15: escribirEnPantalla(mv); break;      //BREAKPOINT
+        case 7: limpiarPantalla(); break;           //CLEAR SCREEN
+        case 15: breakPoint(mv); break;             //BREAKPOINT
         default:
             printf("Error: Llamada al sistema no valida: SYS %d   valor: %d\n", syscall_id, op1.valor);
             mv->ErrorFlag = 4;

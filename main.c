@@ -12,12 +12,11 @@ TInstruccion LeerInstruccionCompleta(TMV *MV, int ip);
 int esIPValida(TMV *mv);
 void reportEstado(int estado);
 TArgs parsearArgumentos(int argc, char *argv[]);
-int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod, TArgs args);
-void configurarSegmentos(TMV *mv, TArgs args, unsigned short tamConst, unsigned short tamCode, unsigned short tamData, unsigned short tamExtra, unsigned short tamStack, unsigned short entryOffset);
-void initSubRutinaPrincipal(TMV *mv, TArgs args);
+int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod);
+void configurarSegmentos(TMV *mv, unsigned short tamConst, unsigned short tamCode, unsigned short tamData, unsigned short tamExtra, unsigned short tamStack, unsigned short entryOffset);
+void initSubRutinaPrincipal(TMV *mv);
 int cargarImagenVMI(const char *nombreImagen, TMV *MV, int *tamCod);
 void ejecutarDisassembler(const TMV *mv, int tamCod);
-
 
 int main(int argc, char *argv[]){
 
@@ -31,38 +30,40 @@ int main(int argc, char *argv[]){
     unsigned int ipActual;                                  // Instruction Pointer
     int tamCod;                                             // Para leer el tamanio del codigo
 
-    //Lectura argumentos de la Consola
-    TArgs args = parsearArgumentos(argc, argv);
+    // Lectura argumentos de la Consola, necesitare el vmi para el breakPoint
+    MV.args = parsearArgumentos(argc, argv);
+    MV.stepMode = 0;
+    MV.Aborted  = 0;
 
-    if (!args.nombreArchVmx && !args.nombreArchVmi) {
+    if (!MV.args.nombreArchVmx && !MV.args.nombreArchVmi) {
         printf(">> Error: se requiere al menos .vmx o .vmi\n");
         return 1;
     }
-    if (!args.nombreArchVmx && args.cantidadParametros > 0) {
-        printf("Aviso: sin .vmx, se ignoran %d parámetro(s)\n",args.cantidadParametros);
-        free(args.parametros);
-        args.parametros = NULL;
-        args.cantidadParametros = 0;
+    if (!MV.args.nombreArchVmx && MV.args.cantidadParametros > 0) {
+        printf("Aviso: sin .vmx, se ignoran %d parámetro(s)\n",MV.args.cantidadParametros);
+        //free(MV.args.parametros); libero al final
+        MV.args.parametros = NULL;
+        MV.args.cantidadParametros = 0;
     }
-    printf("VMX: %s\n", args.nombreArchVmx ? args.nombreArchVmx : "(ninguno)");
-    printf("VMI: %s\n", args.nombreArchVmi ? args.nombreArchVmi : "(ninguno)");
+    printf("VMX: %s\n", MV.args.nombreArchVmx ? MV.args.nombreArchVmx : "(ninguno)");
+    printf("VMI: %s\n", MV.args.nombreArchVmi ? MV.args.nombreArchVmi : "(ninguno)");
     //printf("Memoria: %d KiB\n", args.tamMemoriaKiB);
-    if (args.cantidadParametros) {
-        printf("Parametros (%d): ", args.cantidadParametros);
-        for (int i = 0; i < args.cantidadParametros; i++)
-            printf("%s ", args.parametros[i]);
+    if (MV.args.cantidadParametros) {
+        printf("Parametros (%d): ", MV.args.cantidadParametros);
+        for (int i = 0; i < MV.args.cantidadParametros; i++)
+            printf("%s ", MV.args.parametros[i]);
         printf("\n");
     }
 
     // Caso A: Solo Imagen .vmi
-    if (!args.nombreArchVmx && args.nombreArchVmi) {
-        int err = cargarImagenVMI(args.nombreArchVmi, &MV, &tamCod);
+    if (!MV.args.nombreArchVmx && MV.args.nombreArchVmi) {
+        int err = cargarImagenVMI(MV.args.nombreArchVmi, &MV, &tamCod);
         if (err)
             return err;
     }
     else{
         // Caso B: Tenemos .vmx y opcionalmente .vmi para depuracion mas adelante
-        memBytes = args.tamMemoriaKiB * 1024;
+        memBytes = MV.args.tamMemoriaKiB * 1024;
         MV.memoria = malloc(memBytes);
         MV.memSize = memBytes;
         if (!MV.memoria) {
@@ -70,7 +71,7 @@ int main(int argc, char *argv[]){
             return 1;
         }
 
-        int err = cargarArchivoVMX(args.nombreArchVmx, &MV, &tamCod, args);
+        int err = cargarArchivoVMX(MV.args.nombreArchVmx, &MV, &tamCod);
         if (err) //despues planteo mensaje de posibles errores
             return err;
     }
@@ -78,51 +79,89 @@ int main(int argc, char *argv[]){
     // CODIGO VIEJO DESPUES ACTUALIZO!
 
     // Imprimo Disassembler
-    if (args.modoDisassembler) {
+    if (MV.args.modoDisassembler) {
         ejecutarDisassembler(&MV, tamCod);
     }
 
     //Comienza la ejecucion
     printf("\n>> Tamanio codigo: %d\n", tamCod);
+
     printf("\n>> Tabla de Segmentos seteada\n");
     for (int i = 0; i < 7; i++) {
         int base = MV.TDS[i] >> 16;
         int limite = MV.TDS[i] & 0xFFFF;
         printf("TDS[%d] -> base: %d (0x%04X), tamanio: %d (0x%04X)\n", i, base, base, limite, limite);
     }
+
     printf("\n>> Codigo assembler en ejecucion:\n");
-    while (MV.registros[IP] < tamCod && !BandStop && !MV.ErrorFlag) {
-        ipActual = MV.registros[IP];
-        if (!esIPValida(&MV)) {
-            printf("ERROR: IP fuera del Segmento de Codigo: [%.4X] (%d)\n", MV.registros[IP], MV.registros[IP]);
-            MV.ErrorFlag = 2;
+    if (MV.version == 2){
+        while (MV.registros[IP] < tamCod && !BandStop && !MV.ErrorFlag && !MV.Aborted) {
+            ipActual = MV.registros[IP];
+            if (!esIPValida(&MV)) {
+                printf("ERROR: IP fuera del Segmento de Codigo: [%.4X] (%d)\n", MV.registros[IP], MV.registros[IP]);
+                MV.ErrorFlag = 2;
+            }
+
+            InstruccionActual = LeerInstruccionCompleta(&MV, ipActual);
+
+            MV.registros[IP] += InstruccionActual.tamanio;
+
+            // Verifico que no se haya detectado un error en la decodificacion antes de ejecutar
+            if (!MV.ErrorFlag){
+
+                // Ejecutar o detectar STOP
+                if (InstruccionActual.codOperacion == 0x0F) {
+                    BandStop = 1;
+                } else {
+                    procesarInstruccion(&MV, InstruccionActual);
+                }
+            }
+
+            if (MV.stepMode && !MV.Aborted && !BandStop && !MV.ErrorFlag) {
+                breakPoint(&MV);
+            }
         }
+        if (MV.Aborted) {
+            printf("Ejecución abortada por usuario.\n");
+        } else if (MV.ErrorFlag) {
+            printf("Ejecución detenida por error.\n");
+        } else if (BandStop) {
+            printf("Ejecución detenida por STOP (opcode 0x0F).\n");
+        }
+    }
+    else{
+        while (MV.registros[IP] < tamCod && !BandStop && !MV.ErrorFlag) {
+            ipActual = MV.registros[IP];
+            if (!esIPValida(&MV)) {
+                printf("ERROR: IP fuera del Segmento de Codigo: [%.4X] (%d)\n", MV.registros[IP], MV.registros[IP]);
+                MV.ErrorFlag = 2;
+            }
+            // Leo la instruccion desde memoria
+            InstruccionActual = LeerInstruccionCompleta(&MV, ipActual);
 
-        // Leo la instruccion desde memoria
-        InstruccionActual = LeerInstruccionCompleta(&MV, ipActual);
+            MV.registros[IP] += InstruccionActual.tamanio;
 
-        MV.registros[IP] += InstruccionActual.tamanio;
+            // Verifico que no se haya detectado un error en la decodificacion antes de ejecutar
+            if (!MV.ErrorFlag){
 
-        // Verifico que no se haya detectado un error en la decodificacion antes de ejecutar
-        if (!MV.ErrorFlag){
-
-            // Ejecutar o detectar STOP
-            if (InstruccionActual.codOperacion == 0x0F) {
-                BandStop = 1;
-            } else {
-                //printf("\n");
-                //printf("\nIP ACTUAL: %d: \n", ipActual);
-                //MostrarInstruccion(InstruccionActual, MV.memoria);
-                procesarInstruccion(&MV, InstruccionActual);
-                //imprimirEstado(&MV);
-                //imprimirRegistrosGenerales(&MV);
-                //printf("\n");
+                // Ejecutar o detectar STOP
+                if (InstruccionActual.codOperacion == 0x0F) {
+                    BandStop = 1;
+                } else {
+                    //printf("\n");
+                    //printf("\nIP ACTUAL: %d: \n", ipActual);
+                    //MostrarInstruccion(InstruccionActual, MV.memoria);
+                    procesarInstruccion(&MV, InstruccionActual);
+                    //imprimirEstado(&MV);
+                    //imprimirRegistrosGenerales(&MV);
+                    //printf("\n");
+                }
             }
         }
     }
 
     reportEstado(MV.ErrorFlag);
-    free(args.parametros);
+    free(MV.args.parametros);
     free(MV.memoria);
     return 0;
 }
@@ -342,7 +381,7 @@ TArgs parsearArgumentos(int argc, char *argv[]) {
     return a;
 }
 
-int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod, TArgs args) {
+int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod) {
     FILE *archVmx = fopen(nombreArch, "rb");
     if (!archVmx) {
         printf("\n>> Error: arch vmx no se pudo abrir '%s'\n", nombreArch);
@@ -414,6 +453,8 @@ int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod, TArgs args) {
         }
 
         size_t baseParam = 0;
+        //Para simplificar
+        TArgs args = MV->args;
         if (args.cantidadParametros > 0) {
             for (int i = 0; i < args.cantidadParametros; i++) {
                 baseParam += strlen(args.parametros[i]) + 1;
@@ -435,16 +476,16 @@ int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod, TArgs args) {
     fclose(archVmx);
 
     // Configurar todos los segmentos y TDS
-    configurarSegmentos(MV, args, tamConst, tamCode, tamData, tamExtra, tamStack, entryOffset);
+    configurarSegmentos(MV, tamConst, tamCode, tamData, tamExtra, tamStack, entryOffset);
 
     if ( MV->version == 2){
-        initSubRutinaPrincipal(MV, args);
+        initSubRutinaPrincipal(MV);
     }
 
     return 0;
 }
 
-void configurarSegmentos(TMV *mv, TArgs args, unsigned short tamConst, unsigned short tamCode, unsigned short tamData, unsigned short tamExtra, unsigned short tamStack, unsigned short entryOffset){
+void configurarSegmentos(TMV *mv, unsigned short tamConst, unsigned short tamCode, unsigned short tamData, unsigned short tamExtra, unsigned short tamStack, unsigned short entryOffset){
     size_t base = 0;     // dirección fisica donde empieza el proximo segmento
     int    idx  = 0;     // indice en mv->TDS para la siguiente entrada
 
@@ -458,6 +499,9 @@ void configurarSegmentos(TMV *mv, TArgs args, unsigned short tamConst, unsigned 
     mv->registros[SS] = 0xFFFFFFFF;
     mv->registros[KS] = 0xFFFFFFFF;
     mv->registros[SP] = 0xFFFFFFFF;
+
+    //Para simplificar
+    TArgs args = mv->args;
 
     // Param Segment (solo si hay parametros en args)
     if (args.cantidadParametros > 0 && mv->version == 2) {
@@ -544,7 +588,7 @@ void configurarSegmentos(TMV *mv, TArgs args, unsigned short tamConst, unsigned 
     mv->registros[IP] = ((unsigned int)idxCode << 16) | entryOffset;
 }
 
-void initSubRutinaPrincipal(TMV *mv, TArgs args) {
+void initSubRutinaPrincipal(TMV *mv) {
     // Leo el SP inicial (apunta al final del Stack Segment)
     uint32_t spValue   = mv->registros[SP];
     uint16_t selector  = spValue >> 16;       // selector del SS
@@ -555,6 +599,9 @@ void initSubRutinaPrincipal(TMV *mv, TArgs args) {
 
     // Preparamos los tres valores a apilar
     int32_t valores[3];
+
+    //Para simplificar
+    TArgs args = mv->args;
 
     // a) RET (-1) : 0xFFFFFFFF
     valores[0] = -1;
