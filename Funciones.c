@@ -690,11 +690,56 @@ void POP(TMV *mv, TOperando op1) {
     mv->registros[SP] = ((uint32_t)selector << 16) | newOff;
 }
 
+void CALL(TMV *mv, TOperando op) {
+    // Preparo el operando para pushear el IP
+    TOperando ipOp;
+    ipOp.tipo         = 1;     // 1 = registro
+    ipOp.registro     = IP;    // indice del registro IP
+    ipOp.segmentoReg  = 0;     // caso 0: registro completo
 
+    // PUSH IP
+    PUSH(mv, ipOp);
+    if (mv->ErrorFlag) return;  // abortar si overflow
 
+    // Debemos modificar los 2 bytes menos significativos del IP con el valor del operando
+    uint32_t destino = leerValor(mv, op) & 0xFFFF;
 
+    // IP: conservar selector y cambiamos el offset. Seria como un JMP a la subrutina
+    mv->registros[IP] = (mv->registros[IP] & 0xFFFF0000) | destino;
+}
 
+void RET(TMV *mv, TOperando op_unused) {
+    // SP actual
+    uint32_t spValue   = mv->registros[SP];
+    uint16_t selector  = spValue >> 16;    // selector de SS
+    uint16_t offset    = spValue & 0xFFFF; // offset dentro del SS
 
+    // Compruebo STACK UNDERFLOW: debe haber al menos 4 bytes
+    uint16_t segSize   = mv->TDS[selector] & 0xFFFF;
+    if ((uint32_t)offset + 4 > segSize) {
+        printf("ERROR: Stack underflow en RET en [%.4X]\n", mv->registros[IP]);
+        mv->ErrorFlag = 6;
+        return;
+    }
+
+    // Calculo la direccion fisica del tope de pila
+    uint32_t base = mv->TDS[selector] >> 16;
+    uint32_t addr = base + offset;
+
+    // Leemos 4 bytes en big-endian y reconstruir el valor de retorno
+    uint32_t b0 = mv->memoria[addr];
+    uint32_t b1 = mv->memoria[addr + 1];
+    uint32_t b2 = mv->memoria[addr + 2];
+    uint32_t b3 = mv->memoria[addr + 3];
+    int32_t  retVal = (int32_t)((b0 << 24) | (b1 << 16) | (b2 << 8) | b3);
+
+    // Cargamos IP con el valor extraido (salto de retorno)
+    mv->registros[IP] = (uint32_t)retVal;
+
+    // Incrementamos el SP en 4 bytes (la pila "sube")
+    offset += 4;
+    mv->registros[SP] = ((uint32_t)selector << 16) | offset;
+}
 
 void imprimirRegistrosGenerales(TMV *mv) {
     const char* nombres[] = {"EAX", "EBX", "ECX", "EDX", "EEX", "EFX"};
