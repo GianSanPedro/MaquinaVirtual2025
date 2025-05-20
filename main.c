@@ -12,17 +12,18 @@ TInstruccion LeerInstruccionCompleta(TMV *MV, int ip);
 int esIPValida(TMV *mv);
 void reportEstado(int estado);
 TArgs parsearArgumentos(int argc, char *argv[]);
-int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod, size_t memBytes, TArgs args);
+int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod, TArgs args);
 void configurarSegmentos(TMV *mv, TArgs args, unsigned short tamConst, unsigned short tamCode, unsigned short tamData, unsigned short tamExtra, unsigned short tamStack, unsigned short entryOffset);
-int cargarImagenVMI(const char *nombreImagen, TMV *MV, int *tamCod, size_t *memBytesOut);
+int cargarImagenVMI(const char *nombreImagen, TMV *MV, int *tamCod);
 void ejecutarDisassembler(const TMV *mv, int tamCod);
 
 int main(int argc, char *argv[]){
 
-    FILE *archVmx;
-    FILE *archImagen;
     TMV MV;
     MV.ErrorFlag = 0;
+    MV.memoria = NULL;
+    MV.memSize = 0;
+    size_t memBytes;
     int BandStop = 0;
     TInstruccion InstruccionActual;                         // Para cargar la instruccion act
     unsigned int ipActual;                                  // Instruction Pointer
@@ -43,7 +44,7 @@ int main(int argc, char *argv[]){
     }
     printf("VMX: %s\n", args.nombreArchVmx ? args.nombreArchVmx : "(ninguno)");
     printf("VMI: %s\n", args.nombreArchVmi ? args.nombreArchVmi : "(ninguno)");
-    printf("Memoria: %d KiB\n", args.tamMemoriaKiB);
+    //printf("Memoria: %d KiB\n", args.tamMemoriaKiB);
     if (args.cantidadParametros) {
         printf("Parametros (%d): ", args.cantidadParametros);
         for (int i = 0; i < args.cantidadParametros; i++)
@@ -51,23 +52,23 @@ int main(int argc, char *argv[]){
         printf("\n");
     }
 
-    //Setear la memoria dinamica
-    size_t memBytes = args.tamMemoriaKiB * 1024;
-    MV.memoria = malloc(memBytes);
-    if (!MV.memoria) {
-        printf(">> Error: no se pudo reservar %lu bytes de memoria\n",(unsigned long)memBytes);
-        return 1;
-    }
-
     // Caso A: Solo Imagen .vmi
     if (!args.nombreArchVmx && args.nombreArchVmi) {
-        int err = cargarImagenVMI(args.nombreArchVmi, &MV, &tamCod, &memBytes);
+        int err = cargarImagenVMI(args.nombreArchVmi, &MV, &tamCod);
         if (err)
             return err;
     }
     else{
         // Caso B: Tenemos .vmx y opcionalmente .vmi para depuracion mas adelante
-        int err = cargarArchivoVMX(args.nombreArchVmx, &MV, &tamCod, memBytes, args);
+        memBytes = args.tamMemoriaKiB * 1024;
+        MV.memoria = malloc(memBytes);
+        MV.memSize = memBytes;
+        if (!MV.memoria) {
+            printf(">> Error: no se pudo reservar %lu bytes de memoria\n",(unsigned long)memBytes);
+            return 1;
+        }
+
+        int err = cargarArchivoVMX(args.nombreArchVmx, &MV, &tamCod, args);
         if (err) //despues planteo mensaje de posibles errores
             return err;
     }
@@ -119,6 +120,7 @@ int main(int argc, char *argv[]){
     }
 
     reportEstado(MV.ErrorFlag);
+    free(args.parametros);
     free(MV.memoria);
     return 0;
 }
@@ -332,7 +334,7 @@ TArgs parsearArgumentos(int argc, char *argv[]) {
     return a;
 }
 
-int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod, size_t memBytes, TArgs args) {
+int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod, TArgs args) {
     FILE *archVmx = fopen(nombreArch, "rb");
     if (!archVmx) {
         printf("\n>> Error: arch vmx no se pudo abrir '%s'\n", nombreArch);
@@ -357,7 +359,7 @@ int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod, size_t memByt
         fread(&low,  sizeof(low),  1, archVmx);
         tamCode = (high << 8) | low;
         *tamCod = tamCode;
-        tamData  = (unsigned int)(memBytes - tamCode);
+        tamData  = (unsigned int)(MV->memSize - tamCode);
     }
     else {
         // V2: Code, Data, Extra, Stack, Const, Entry
@@ -388,8 +390,8 @@ int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod, size_t memByt
     }
 
     // Validar que CodeSegment entre en la memoria
-    if (tamCode > memBytes) {
-        printf("\n>> Error: Codigo (%u bytes) excede memoria (%lu bytes)\n",tamCode, (unsigned long)memBytes);
+    if (tamCode > MV->memSize) {
+        printf("\n>> Error: Codigo (%u bytes) excede memoria (%lu bytes)\n",tamCode, (unsigned long)MV->memSize);
         fclose(archVmx);
         return 2;
     }
@@ -504,7 +506,7 @@ void configurarSegmentos(TMV *mv, TArgs args, unsigned short tamConst, unsigned 
     mv->registros[IP] = ((unsigned int)idxCode << 16) | entryOffset;
 }
 
-int cargarImagenVMI(const char *nombreImagen, TMV *MV, int *tamCod, size_t *memBytesOut){
+int cargarImagenVMI(const char *nombreImagen, TMV *MV, int *tamCod){
     FILE *arch = fopen(nombreImagen, "rb");
     if (!arch) {
         printf("\n>> Error: arch Vmi no se pudo abrir imagen '%s'\n", nombreImagen);
@@ -524,10 +526,10 @@ int cargarImagenVMI(const char *nombreImagen, TMV *MV, int *tamCod, size_t *memB
     fread(&low,  1, 1, arch);
     unsigned short memKiB = (high << 8) | low;
     size_t memBytes = (size_t)memKiB * 1024;
-    *memBytesOut = memBytes;
 
     // Asignamos la memoria dinamica
     MV->memoria = malloc(memBytes);
+    MV->memSize = memBytes;
     if (!MV->memoria) {
         printf("\n>> Error: no se pudo reservar %lu bytes para la memoria\n",(unsigned long)memBytes);
         fclose(arch);

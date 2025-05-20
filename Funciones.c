@@ -69,13 +69,14 @@ int leerValor(TMV *mv, TOperando op) {
             return valor;
             break;
         }
-        case 3: { // Memoria siempre 4 bytes (acceso logico)
+        case 3: { // Memoria dinamica (acceso logico)
             int selector, offset_registro;
 
             if (op.registro == 0) {
-                // Caso: no se especifico registro base -> usar DS
-                selector = 1;
-                offset_registro = 0;
+                // Caso: no se especifico registro base -> usar DS dinamicamente!
+                unsigned int ds = mv->registros[DS];
+                selector = ds >> 16;
+                offset_registro = ds & 0xFFFF;
             } else {
                 int contenido = mv->registros[(int)op.registro];
                 selector = contenido >> 16;
@@ -88,17 +89,33 @@ int leerValor(TMV *mv, TOperando op) {
 
             //printf("LV: Leer de direccion fisica: %d (0x%04X)  selector: %d  base: %d  offset_reg: %d  offset_instr: %d\n", direccion, direccion, selector, base, offset_registro, offset_instruc);
 
-            if (esDireccionValida(mv, selector, direccion, 4)) {
+            // Determino cuantos bytes leer
+            int bytes;
+            if (op.tamCelda == 2) {
+                bytes = 2;
+            } else {
+                if (op.tamCelda == 3) {
+                    bytes = 1;
+                } else {
+                    bytes = 4;
+                }
+            }
+
+            if (esDireccionValida(mv, selector, direccion, bytes)) {
                 int val = 0;
-
-                unsigned char byte1 = (unsigned char) mv->memoria[direccion];
-                unsigned char byte2 = (unsigned char) mv->memoria[direccion + 1];
-                unsigned char byte3 = (unsigned char) mv->memoria[direccion + 2];
-                unsigned char byte4 = (unsigned char) mv->memoria[direccion + 3];
-
-                val = (byte1 << 24) | (byte2 << 16) | (byte3 << 8) | byte4;
-
+                for (int i = 0; i < bytes; i++) {
+                  val = (val << 8) | (unsigned char)mv->memoria[direccion + i];
+                }
                 //printf("LV: Leer MEMORIA: %d\n", val);
+
+                if (bytes == 2) {
+                    val = (val << 16) >> 16;
+                } else {
+                    if (bytes == 1) {
+                        val = (val << 24) >> 24;
+                    }
+                }
+
                 return val;
             }
             else
@@ -136,13 +153,14 @@ void escribirValor(TMV *mv, TOperando op, int valor) {
             break;
         }
 
-        case 3: { // Memoria (acceso logico)
+        case 3: { // Memoria tamaño variable (acceso logico)
             int selector, offset_registro;
 
             if (op.registro == 0) {
                 // Caso sin registro explicito -> usar DS
-                selector = 1;
-                offset_registro = 0;
+                unsigned int ds = mv->registros[DS];
+                selector = ds >> 16;
+                offset_registro = ds & 0xFFFF;
             } else {
                 int contenido = mv->registros[(int)op.registro];
                 selector = contenido >> 16;
@@ -156,12 +174,24 @@ void escribirValor(TMV *mv, TOperando op, int valor) {
             //printf("EV: Escribir en direccion fisica: %d (0x%04X)  selector: %d  base: %d  offset_reg: %d  offset_instr: %d\n", direccion, direccion, selector, base, offset_registro, offset_instruc);
             //printf("EV: Valor a escribir = %d\n", valor);
 
+            // Calcular cuantos bytes escribir segun tamCelda
+            int bytes;
+            if (op.tamCelda == 2) {
+                bytes = 2;
+            } else {
+                if (op.tamCelda == 3) {
+                    bytes = 1;
+                } else {
+                    bytes = 4;
+                }
+            }
+
             // Valido los limites de escritura
-            if (esDireccionValida(mv, selector, direccion, 4)) {
-                mv->memoria[direccion]     = (valor >> 24) & 0xFF;
-                mv->memoria[direccion + 1] = (valor >> 16) & 0xFF;
-                mv->memoria[direccion + 2] = (valor >> 8) & 0xFF;
-                mv->memoria[direccion + 3] = valor & 0xFF;
+            if (esDireccionValida(mv, selector, direccion, bytes)) {
+                for (int i = 0; i < bytes; i++) {
+                    int shift = (bytes - 1 - i) * 8;
+                    mv->memoria[direccion + i] = (valor >> shift) & 0xFF;
+                }
 
                 //printf("EV: Memoria [%d] escrita con %d, verificado: %d\n", direccion, valor, verificado);
             } else {
@@ -179,8 +209,9 @@ void leerDesdeTeclado(TMV *mv) {
 
     int selector, offset;
     if (edxVal == 0) {
-        selector = 1;                           // usar DS por defecto
-        offset = 0;
+        unsigned int ds = mv->registros[DS];    // usar DS por defecto
+        selector = ds >> 16;
+        offset = ds & 0xFFFF;
     } else {
         selector = edxVal >> 16;                // indice de la TDS
         offset   = edxVal & 0xFFFF;             // offset dentro del segmento
@@ -237,8 +268,9 @@ void escribirEnPantalla(TMV *mv) { //Imprimir
 
     int selector, offset;
     if (edxVal == 0) {
-        selector = 1;                           // usar DS
-        offset = 0;
+        unsigned int ds = mv->registros[DS];    // usar DS por defecto
+        selector = ds >> 16;
+        offset = ds & 0xFFFF;
     } else {
         selector = edxVal >> 16;                // indice del segmento
         offset   = edxVal & 0xFFFF;             // desplazamiento dentro del segmento
@@ -315,15 +347,14 @@ int esDireccionValida(TMV *mv, int selector, int direccion, int tam) {
     // Validacion del segmento
     if (direccion < base || direccion + tam - 1 >= base + tamanio) {
         mv->ErrorFlag = 2;
-        printf(">> Fallo de segmento: direccion %d fuera de segmento %d (base %d, tamanio %d)\n",
-               direccion, selector, base, tamanio);
+        printf(">> Fallo de segmento: direccion %d fuera de segmento %d (base %d, tamanio %d)\n", direccion, selector, base, tamanio);
         return 0;
     }
 
     // Validacion de la memoria real
-    if (direccion + tam - 1 >= sizeof(mv->memoria)) {
+    if (direccion + tam - 1 >= mv->memSize) {
         mv->ErrorFlag = 2;
-        printf(">> Acceso fuera de la RAM: direccion %d excede memoria real (16384 bytes)\n", direccion);
+        printf(">> Acceso fuera de la RAM: direccion %d excede memoria real (%lu bytes)\n", direccion, mv->memSize);
         return 0;
     }
     //printf("DV: Direccion fisica validada: %d (0x%04X)  selector: %d  BaseSegmento: %d  TamanioSegmento: %d\n", direccion, direccion, selector, base, tamanio);

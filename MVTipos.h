@@ -22,6 +22,7 @@ typedef struct{
     unsigned int registros[16];     // 16 registros de 4 bytes (se utilizan 11 en esta primera parte)
     int ErrorFlag;                  // Bandera para detectar errores
     char version;
+    size_t memSize;                 // Tamaño en bytes de la memoria
 }TMV;
 
 typedef struct {
@@ -34,11 +35,11 @@ typedef struct {
 } TOperando;
 
 typedef struct {
-    char codOperacion;    // Código de operación (5 bits reales)
-    TOperando op1;        // Operando A
-    TOperando op2;        // Operando B
-    int tamanio;          // Tamaño total de la instrucción en bytes
-    int ipInicial;        // Dirección en memoria donde comienza la instrucción
+    char codOperacion;              // Código de operación (5 bits reales)
+    TOperando op1;                  // Operando A
+    TOperando op2;                  // Operando B
+    int tamanio;                    // Tamaño total de la instrucción en bytes
+    int ipInicial;                  // Dirección en memoria donde comienza la instrucción
 } TInstruccion;
 
 typedef struct {

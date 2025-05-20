@@ -4,19 +4,19 @@
 #include "Operaciones.h"
 
 const char *mnemonicos[] = {
-    "SYS", "JMP", "JZ", "JP", "JN", "JNZ", "JNP", "JNN", "NOT", "", "", "", "", "", "", "STOP",
+    "SYS", "JMP", "JZ", "JP", "JN", "JNZ", "JNP", "JNN", "NOT", "", "", "PUSH", "POP", "CALL", "RET", "STOP",
     "MOV", "ADD", "SUB", "SWAP", "MUL", "DIV", "CMP", "SHL", "SHR", "AND", "OR", "XOR", "LDL", "LDH", "RND"
 };
 
 const char *regNombres[] = {
     "CS",  // 0
     "DS",  // 1
-    "R2",  // 2 No definido
-    "R3",  // 3 No definido
-    "R4",  // 4 No definido
+    "ES",  // 2
+    "SS",  // 3
+    "KS",  // 4
     "IP",  // 5
-    "R6",  // 6 No definido
-    "R7",  // 7 No definido
+    "SP",  // 6
+    "BP",  // 7
     "CC",  // 8
     "AC",  // 9
     "EAX", // 10
@@ -104,11 +104,11 @@ void MostrarOperando(TOperando op) {
         }
 
         if (op.registro == DS) { //REVISAAAAAR!!!!!!!!!!!!!!!!!!
-            printf("%c[%d]", prefix, op.desplazamiento); // acceso absoluto a memoria DS
+            printf("%c[%d]", prefijo, op.desplazamiento); // acceso absoluto a memoria DS
         } else if (op.registro >= 0 && op.registro < 16) {
-            printf("%c[%s+%d]", prefix, regNombres[(int)op.registro], op.desplazamiento);
+            printf("%c[%s+%d]", prefijo, regNombres[(int)op.registro], op.desplazamiento);
         } else {
-            printf("%c[??+%d]", prefix, op.desplazamiento);
+            printf("%c[??+%d]", prefijo, op.desplazamiento);
         }
     }
 }
@@ -170,7 +170,7 @@ void procesarInstruccion(TMV *mv, TInstruccion inst) {
         case 0x08: NOT(mv, inst.op1); break;
         case 0x0B:
             if (mv->version == 2) {
-                PUSH(mv, inst.op1);
+                //PUSH(mv, inst.op1);
             } else {
                 printf("ERROR: Trata de ejecutar PUSH en una MV1 : [%.4X] (%d)\n", mv->registros[IP], mv->registros[IP]);
                 mv->ErrorFlag = 1;
@@ -178,7 +178,7 @@ void procesarInstruccion(TMV *mv, TInstruccion inst) {
             break;
         case 0x0C:
             if (mv->version == 2) {
-                POP(mv, inst.op1);
+                //POP(mv, inst.op1);
             } else {
                 printf("ERROR: Trata de ejecutar POP en una MV1 : [%.4X] (%d)\n", mv->registros[IP], mv->registros[IP]);
                 mv->ErrorFlag = 1;
@@ -186,7 +186,7 @@ void procesarInstruccion(TMV *mv, TInstruccion inst) {
             break;
         case 0x0D:
             if (mv->version == 2) {
-                CALL(mv, inst.op1);
+                //CALL(mv, inst.op1);
             } else {
                 printf("ERROR: Trata de ejecutar CALL en una MV1 : [%.4X] (%d)\n", mv->registros[IP], mv->registros[IP]);
                 mv->ErrorFlag = 1;
@@ -196,7 +196,7 @@ void procesarInstruccion(TMV *mv, TInstruccion inst) {
         // Instruccion SIN operandos
         case 0x0E:
             if (mv->version == 2) {
-                RET(mv, inst.op1);
+                //RET(mv, inst.op1);
             } else {
                 printf("ERROR: Trata de ejecutar RET en una MV1 : [%.4X] (%d)\n", mv->registros[IP], mv->registros[IP]);
                 mv->ErrorFlag = 1;
