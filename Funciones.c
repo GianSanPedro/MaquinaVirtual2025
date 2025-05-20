@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <time.h>
 #include "MVTipos.h"
 #include "Operaciones.h"
@@ -621,6 +622,79 @@ void NOT(TMV *mv, TOperando op1) {
 
     actualizarNZ(mv, resultado);        // modifica CC
 }
+
+void PUSH(TMV *mv, TOperando op1) {
+    // Obtengo el selector y offset actuales de SP
+    uint32_t sp = mv->registros[SP];
+    uint16_t selector = sp >> 16;
+    int16_t offset = sp & 0xFFFF;
+
+    // Decrementar SP en 4 bytes (la pila crece hacia direcciones menores)
+    int32_t newOff  = (int32_t)offset - 4;
+    uint32_t newSP  = ((uint32_t)selector << 16) | ((uint16_t)newOff & 0xFFFF);
+
+    // Comprobamos el stack overflow (offset negativo)
+    if (newSP < mv->registros[SS]) {
+        printf("ERROR: Stack overflow en PUSH en [%.4X]\n", mv->registros[IP]);
+        mv->ErrorFlag = 5;
+        return;
+    }
+
+    // Actualizar SP
+    mv->registros[SP] = newSP;
+
+    // Leer el valor del operando (inmediato, registro o memoria)
+    int32_t val = leerValor(mv, op1);
+
+    // Calcular direccion fisica: base del segmento + nuevo offset
+    uint32_t base = mv->TDS[selector] >> 16;
+    uint32_t addr = base + newOff;
+
+    // Almaceno los 4 bytes en big-endian (MSB primero)
+    mv->memoria[addr] = (val >> 24) & 0xFF;     // byte 3 (MSB)
+    mv->memoria[addr+1] = (val >> 16) & 0xFF;   // byte 2
+    mv->memoria[addr+2] = (val >>  8) & 0xFF;   // byte 1
+    mv->memoria[addr+3] = (val >>  0) & 0xFF;   // byte 0 (LSB)
+}
+
+void POP(TMV *mv, TOperando op1) {
+    // SP actual
+    uint32_t sp = mv->registros[SP];
+    uint16_t selector = sp >> 16;
+    uint16_t offset = sp & 0xFFFF;
+
+    // Comprobamos el STACK UNDERFLOW: debe haber al menos 4 bytes en la pila
+    uint16_t segSize  = mv->TDS[selector] & 0xFFFF;
+    if ((uint32_t)offset + 4 > segSize) {
+        printf("ERROR: Stack underflow en POP en [%.4X]\n", mv->registros[IP]);
+        mv->ErrorFlag = 6;
+        return;
+    }
+
+    // Calculamos la direccion fisica del tope de pila
+    uint32_t base = mv->TDS[selector] >> 16;
+    uint32_t addr = base + offset;
+
+    // Leemos 4 bytes en big-endian: MSB en addr, LSB en addr+3
+    int32_t val =
+        ((int32_t)mv->memoria[addr] << 24) |
+        ((int32_t)mv->memoria[addr + 1] << 16) |
+        ((int32_t)mv->memoria[addr + 2] <<  8) |
+        ((int32_t)mv->memoria[addr + 3] <<  0);
+
+    // Escribimos el valor extraido en el operando (trunca si < 4 bytes)
+    escribirValor(mv, op1, val);
+
+    // Incrementamos el SP en 4 bytes (pila crece hacia direcciones inferiores)
+    uint16_t newOff = offset + 4;
+    mv->registros[SP] = ((uint32_t)selector << 16) | newOff;
+}
+
+
+
+
+
+
 
 void imprimirRegistrosGenerales(TMV *mv) {
     const char* nombres[] = {"EAX", "EBX", "ECX", "EDX", "EEX", "EFX"};

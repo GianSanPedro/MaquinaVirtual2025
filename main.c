@@ -263,6 +263,12 @@ void reportEstado(int estado){
         break;
         case 3: printf("\n\n>> DIVISION POR CERO");
         break;
+        case 4: printf("\n\n>> MEMORIA INSUFICIENTE");
+        break;
+        case 5: printf("\n\n>> STACK OVERFLOW");
+        break;
+        case 6: printf("\n\n>> STACK UNDERFLOW");
+        break;
         default: printf("\n\n>> ERROR DESCONOCIDO");
         break;
    }
@@ -543,7 +549,7 @@ int cargarImagenVMI(const char *nombreImagen, TMV *MV, int *tamCod){
     char identificador[5];
     unsigned char version;
     fread(identificador, sizeof(identificador), 1, arch);
-    fread(&version,       sizeof(version),     1, arch);
+    fread(&version, sizeof(version), 1, arch);
     MV->version = version;
 
     // Leo el tamaño de memoria (KiB)
@@ -579,10 +585,7 @@ int cargarImagenVMI(const char *nombreImagen, TMV *MV, int *tamCod){
         fread(&b1, 1, 1, arch);
         fread(&b2, 1, 1, arch);
         fread(&b3, 1, 1, arch);
-        MV->TDS[j] = ((uint32_t)b0 << 24) |
-                     ((uint32_t)b1 << 16) |
-                     ((uint32_t)b2 <<  8) |
-                     ((uint32_t)b3 <<  0);
+        MV->TDS[j] = ((uint32_t)b0 << 24) | ((uint32_t)b1 << 16) | ((uint32_t)b2 <<  8) | ((uint32_t)b3 <<  0);
     }
 
     // Leemos la memoria principal
