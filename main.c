@@ -360,6 +360,16 @@ int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod, TArgs args) {
         tamCode = (high << 8) | low;
         *tamCod = tamCode;
         tamData  = (unsigned int)(MV->memSize - tamCode);
+
+        // Validar que CodeSegment entre en la memoria
+        if (tamCode > MV->memSize) {
+            printf("\n>> Error: Codigo (%u bytes) excede memoria (%lu bytes)\n",tamCode, (unsigned long)MV->memSize);
+            fclose(archVmx);
+            return 2;
+        }
+
+        // Cargar la totalidad del CodeSegment
+        fread(MV->memoria, 1, tamCode, archVmx);
     }
     else {
         // V2: Code, Data, Extra, Stack, Const, Entry
@@ -387,17 +397,33 @@ int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod, TArgs args) {
         fread(&high, sizeof(high), 1, archVmx);
         fread(&low,  sizeof(low),  1, archVmx);
         entryOffset = (high << 8) | low;
+
+        // Validar que CodeSegment entre en la memoria total
+        if (tamCode + tamData + tamExtra + tamStack + tamConst > MV->memSize) {
+            printf("\n>> Error: Segmentos totales (%u bytes) exceden memoria (%lu bytes)\n", tamCode + tamData + tamExtra + tamStack + tamConst,(unsigned long)MV->memSize);
+            fclose(archVmx);
+            return 2;
+        }
+
+        size_t baseParam = 0;
+        if (args.cantidadParametros > 0) {
+            for (int i = 0; i < args.cantidadParametros; i++) {
+                baseParam += strlen(args.parametros[i]) + 1;
+            }
+            baseParam += args.cantidadParametros * 4;
+        }
+        size_t baseConst = baseParam;              // justo tras Param
+        size_t baseCode  = baseConst + tamConst;   // justo tras Const
+
+        // Leo Code Segment en su posición real
+        fread(MV->memoria + baseCode, 1, tamCode, archVmx);
+
+        // Leo Const Segment (esta inmediatamente despues del code en el .vmx)
+        if (tamConst > 0) {
+            fread(MV->memoria + baseConst, 1, tamConst, archVmx);
+        }
     }
 
-    // Validar que CodeSegment entre en la memoria
-    if (tamCode > MV->memSize) {
-        printf("\n>> Error: Codigo (%u bytes) excede memoria (%lu bytes)\n",tamCode, (unsigned long)MV->memSize);
-        fclose(archVmx);
-        return 2;
-    }
-
-    // Cargar la totalidad del CodeSegment
-    fread(MV->memoria, 1, tamCode, archVmx);
     fclose(archVmx);
 
     // Configurar todos los segmentos y TDS
