@@ -16,7 +16,6 @@ int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod);
 void configurarSegmentos(TMV *mv, unsigned short tamConst, unsigned short tamCode, unsigned short tamData, unsigned short tamExtra, unsigned short tamStack, unsigned short entryOffset);
 void initSubRutinaPrincipal(TMV *mv);
 int cargarImagenVMI(const char *nombreImagen, TMV *MV, int *tamCod);
-void ejecutarDisassembler(const TMV *mv, int tamCod);
 
 int main(int argc, char *argv[]){
 
@@ -80,7 +79,7 @@ int main(int argc, char *argv[]){
 
     // Imprimo Disassembler
     if (MV.args.modoDisassembler) {
-        ejecutarDisassembler(&MV, tamCod);
+        Disassembler(&MV, tamCod);
     }
 
     //Comienza la ejecucion
@@ -286,11 +285,14 @@ TInstruccion LeerInstruccionCompleta(TMV *MV, int ip) {
     return inst;
 }
 
-int esIPValida(TMV *mv) {
-    int base = mv->TDS[CS] >> 16;
-    int tam = mv->TDS[CS] & 0xFFFF;
-    int ip = mv->registros[IP];
-    return (ip >= base && ip < base + tam);
+int esIPValida(TMV *MV) {
+    uint32_t  csReg = MV->registros[CS];
+    uint32_t  selectorCS = csReg >> 16;                  // selector
+    uint32_t  baseCS = MV->TDS[selectorCS] >> 16;        // base fisica del segmento
+
+    uint32_t tam = MV->TDS[selectorCS] & 0xFFFF;
+    uint32_t ip = MV->registros[IP];
+    return (ip >= baseCS && ip < baseCS + tam);
 }
 
 void reportEstado(int estado){
@@ -707,34 +709,7 @@ int cargarImagenVMI(const char *nombreImagen, TMV *MV, int *tamCod){
     return 0;
 }
 
-void ejecutarDisassembler(const TMV *MV, int tamCod) {
-    printf("\n>> Código assembler cargado en memoria:\n");
 
-    // Calculamos la direccion fisica inicial del Code Segment
-    unsigned int csReg   = MV->registros[CS];
-    unsigned int selCS   = csReg >> 16;              // selector
-    unsigned int offCS   = csReg & 0xFFFF;           // offset (normalmente 0 al iniciar)
-    unsigned int baseCS  = MV->TDS[selCS] >> 16;      // base fisica del segmento
-    unsigned int inicio  = baseCS + offCS;           // inicio en MV memoria
-    unsigned int finCS   = baseCS + tamCod;          // fin (no inclusive)
-
-    int ipTemp = inicio;
-    int hayStop = 0;
-
-    while (ipTemp < (int)finCS) {                    //sino salta warning tipos...
-        TInstruccion inst = LeerInstruccionCompleta(&MV, ipTemp);
-        if (inst.codOperacion == 0x0F) {
-            hayStop = 1;
-        }
-        MostrarInstruccion(inst, MV->memoria);
-        ipTemp += inst.tamanio;
-    }
-
-    printf("\nError flag %d\n", MV->ErrorFlag);
-    if (!hayStop) {
-        printf("\nAdvertencia: STOP no presente en el código Assembler\n");
-    }
-}
 
 
 

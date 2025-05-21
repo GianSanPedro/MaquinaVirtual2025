@@ -1,4 +1,7 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <ctype.h>
 #include "MVTipos.h"
 #include "Funciones.h"
 #include "Operaciones.h"
@@ -26,6 +29,160 @@ const char *regNombres[] = {
     "EEX", // 14
     "EFX"  // 15
 };
+
+void Disassembler(const TMV *MV, int tamCod) {
+    printf("\n>> Código assembler cargado en memoria:\n");
+
+    // Calculamos la direccion fisica inicial del Code Segment
+    uint32_t  csReg = MV->registros[CS];
+    uint32_t  selectorCS = csReg >> 16;                  // selector
+    uint32_t  offsetCS = csReg & 0xFFFF;                 // offset (normalmente 0 al iniciar)
+    uint32_t  baseCS = MV->TDS[selectorCS] >> 16;        // base fisica del segmento
+    uint32_t  inicio = baseCS + offsetCS;                // inicio en MV memoria
+    uint32_t  finCS = baseCS + tamCod;                   // fin (no inclusive)
+
+    uint32_t entryOff  = MV->registros[IP] & 0xFFFF;        // Entry Point
+    uint32_t entryAdrr = baseCS + entryOff;                 // Direccion a marcar >
+
+    uint32_t ipTemp = inicio;
+    int hayStop = 0;
+
+    if(MV->version == 2){
+        MostrarConstantes(MV);
+        printf("\n");
+    }
+
+    while (ipTemp < finCS) {
+        TInstruccion inst = LeerInstruccionCompleta(MV, ipTemp);
+        if (inst.codOperacion == 0x0F) {
+            hayStop = 1;
+        }
+        // Marca entry point
+        printf("%c", (ipTemp == entryAdrr) ? '>' : ' ');
+        MostrarInstruccion(inst, MV->memoria);
+        ipTemp += inst.tamanio;
+    }
+
+    printf("\nError flag %d\n", MV->ErrorFlag);
+    if (!hayStop) {
+        printf("\nAdvertencia: STOP no presente en el código Assembler\n");
+    }
+}
+
+void MostrarConstantes(TMV *mv) {
+    uint16_t selectorKS = mv->registros[KS] >> 16;
+    uint32_t base  = mv->TDS[selectorKS] >> 16;
+    uint16_t size  = mv->TDS[selectorKS] & 0xFFFF;
+    uint32_t end   = base + size;
+
+    uint32_t pos = base;
+    while (pos < end) {
+        if (mv->memoria[pos] == 0) {
+            // no es el inicio de una cadena: avanzamos uno
+            pos = pos + 1;
+        }
+        else {
+            // Encontramos el inicio de una cadena
+            uint32_t inicio = pos;
+            uint32_t cursor = pos;
+
+            // Buscamos el terminador '\0'
+            while (cursor < end && mv->memoria[cursor] != 0) {
+                cursor = cursor + 1;
+            }
+            // Incluimos el byte 0 si cabe
+            if (cursor < end) {
+                cursor = cursor + 1;
+            }
+
+            uint32_t longitud = cursor - inicio;
+
+            // Imprimimos la dirección
+            printf("[%04X] ", inicio);
+
+            // Imprimimos los bytes en hex (hasta 7, o 6 + "..")
+            if (longitud <= 7) {
+                uint32_t i = 0;
+                while (i < longitud) {
+                    printf("%02X ", (unsigned char)mv->memoria[inicio + i]);
+                    i++;
+                }
+                // alinear
+                while (i < 8) {
+                    printf("   ");
+                    i++;
+                }
+            }
+            else {
+                // Primeros 6 bytes
+                uint32_t i = 0;
+                while (i < 6) {
+                    printf("%02X ", (unsigned char)mv->memoria[inicio + i]);
+                    i++;
+                }
+                printf(".. ");
+                // Alinear
+                while (i < 8) {
+                    printf("   ");
+                    i++;
+                }
+            }
+
+            // imprimir ASCII completo entre comillas
+            printf("| \"");
+            uint32_t j = 0;
+            while (j < longitud) {
+                unsigned char c = mv->memoria[inicio + j];
+                if (c == 0) {
+                    printf("\\0");
+                }
+                else if (isprint(c)) {
+                    printf("%c", c);
+                }
+                else {
+                    printf(".");
+                }
+                j++;
+            }
+            printf("\"\n");
+
+            // saltamos al final de la cadena
+            pos = cursor;
+        }
+    }
+}
+
+void MostrarInstruccion(TInstruccion inst, char *memoria) {
+    // Direccion IP en hexadecimal (4 dígitos)
+    printf("[%.4X] ", inst.ipInicial);
+
+    // Mostrar instruccion en hexa, byte por byte
+    for (int i = 0; i < inst.tamanio; i++) {
+        printf("%.2X ", (unsigned char)memoria[inst.ipInicial + i]);
+    }
+
+    // Rellenar espacio si la instruccion es corta, para alinear la barra|
+    for (int i = inst.tamanio; i < 8; i++) {
+        printf("   ");
+    }
+
+    printf("|  %s", mnemonicos[(int)inst.codOperacion]);
+
+    // Mostrar operandos si existen
+    int tieneOp1 = inst.op1.tipo != 0;
+    int tieneOp2 = inst.op2.tipo != 0;
+
+    if (tieneOp1) {
+        printf("     ");
+        MostrarOperando(inst.op1);
+        if (tieneOp2) {
+            printf(", ");
+            MostrarOperando(inst.op2);
+        }
+    }
+
+    printf("\n");
+}
 
 void MostrarOperando(TOperando op) {
     if (op.tipo == 1) { // Registro
@@ -113,38 +270,6 @@ void MostrarOperando(TOperando op) {
     }
 }
 
-void MostrarInstruccion(TInstruccion inst, char *memoria) {
-    // Direccion IP en hexadecimal (4 dígitos)
-    printf("[%.4X] ", inst.ipInicial);
-
-    // Mostrar instruccion en hexa, byte por byte
-    for (int i = 0; i < inst.tamanio; i++) {
-        printf("%.2X ", (unsigned char)memoria[inst.ipInicial + i]);
-    }
-
-    // Rellenar espacio si la instruccion es corta, para alinear la barra|
-    for (int i = inst.tamanio; i < 8; i++) {
-        printf("   ");
-    }
-
-    printf("|  %s", mnemonicos[(int)inst.codOperacion]);
-
-    // Mostrar operandos si existen
-    int tieneOp1 = inst.op1.tipo != 0;
-    int tieneOp2 = inst.op2.tipo != 0;
-
-    if (tieneOp1) {
-        printf("     ");
-        MostrarOperando(inst.op1);
-        if (tieneOp2) {
-            printf(", ");
-            MostrarOperando(inst.op2);
-        }
-    }
-
-    printf("\n");
-}
-
 void procesarInstruccion(TMV *mv, TInstruccion inst) {
     unsigned int ip_backup = mv->registros[IP];
     switch (inst.codOperacion) {
@@ -223,7 +348,6 @@ void procesarInstruccion(TMV *mv, TInstruccion inst) {
         mv->ErrorFlag = 2;
     }
 }
-
 
 
 
