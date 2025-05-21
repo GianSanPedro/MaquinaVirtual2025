@@ -413,6 +413,7 @@ int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod) {
         // Validar que CodeSegment entre en la memoria
         if (tamCode > MV->memSize) {
             printf("\n>> Error: Codigo (%u bytes) excede memoria (%lu bytes)\n",tamCode, (unsigned long)MV->memSize);
+            MV->ErrorFlag = 4;
             fclose(archVmx);
             return 2;
         }
@@ -447,24 +448,29 @@ int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod) {
         fread(&low,  sizeof(low),  1, archVmx);
         entryOffset = (high << 8) | low;
 
-        // Validar que CodeSegment entre en la memoria total
-        if (tamCode + tamData + tamExtra + tamStack + tamConst > MV->memSize) {
-            printf("\n>> Error: Segmentos totales (%u bytes) exceden memoria (%lu bytes)\n", tamCode + tamData + tamExtra + tamStack + tamConst,(unsigned long)MV->memSize);
-            fclose(archVmx);
-            return 2;
-        }
-
         size_t baseParam = 0;
         //Para simplificar
         TArgs args = MV->args;
         if (args.cantidadParametros > 0) {
             for (int i = 0; i < args.cantidadParametros; i++) {
+                // longitud de cada string + '\0'
                 baseParam += strlen(args.parametros[i]) + 1;
             }
+            // punteros argv (4 bytes c/u)
             baseParam += args.cantidadParametros * 4;
         }
+        size_t tamParam = baseParam;
         size_t baseConst = baseParam;              // justo tras Param
         size_t baseCode  = baseConst + tamConst;   // justo tras Const
+
+        // Validar que los segmentos entren en la memoria total
+        size_t totalSegs = tamParam + tamConst + tamCode + tamData + tamExtra + tamStack;
+        if (totalSegs > MV->memSize) {
+            printf("\n>> Error: Segmentos totales (%lu bytes) exceden memoria (%lu bytes)\n", (unsigned long)totalSegs,(unsigned long)MV->memSize);
+            MV->ErrorFlag = 4;
+            fclose(archVmx);
+            return 2;
+        }
 
         // Leo Code Segment en su posición real
         fread(MV->memoria + baseCode, 1, tamCode, archVmx);
