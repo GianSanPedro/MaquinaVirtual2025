@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <time.h>
 #include "MVTipos.h"
 #include "Operaciones.h"
@@ -103,9 +104,12 @@ int leerValor(TMV *mv, TOperando op) {
             }
 
             if (esDireccionValida(mv, selector, direccion, bytes)) {
-                int val = 0;
+                //int val = 0;
+                uint32_t val = 0;
                 for (int i = 0; i < bytes; i++) {
-                  val = (val << 8) | (unsigned char)mv->memoria[direccion + i];
+                    int shift = i * 8;
+                    val = (val << shift) | (unsigned char)mv->memoria[direccion + i];
+                  //val = (val << 8) | (unsigned char)mv->memoria[direccion + i];
                 }
                 //printf("LV: Leer MEMORIA: %d\n", val);
 
@@ -133,7 +137,7 @@ void escribirValor(TMV *mv, TOperando op, int valor) {
     // No se escribe en inmediatos ni operandos vacios
     switch (op.tipo) {
         case 1: { // Registro
-            int *reg = &mv->registros[(int)op.registro];
+            unsigned int *reg = &mv->registros[(int)op.registro];
             //printf("TEST ESCRIBO REG, valor: %d , segmentOp: %d, tipo: %d \n\n", valor, op.segmentoReg, op.tipo);
             switch (op.segmentoReg) {
                 case 0:                                             // Registro completo (EAX)
@@ -164,7 +168,7 @@ void escribirValor(TMV *mv, TOperando op, int valor) {
                 selector = ds >> 16;
                 offset_registro = ds & 0xFFFF;
             } else {
-                int contenido = mv->registros[(int)op.registro];
+                unsigned int contenido = mv->registros[(int)op.registro];
                 selector = contenido >> 16;
                 offset_registro = contenido & 0xFFFF;
             }
@@ -191,8 +195,9 @@ void escribirValor(TMV *mv, TOperando op, int valor) {
             // Valido los limites de escritura MOV W[X] [Y]
             if (esDireccionValida(mv, selector, direccion, bytes)) {
                 for (int i = 0; i < bytes; i++) {
-                    int shiff = i * 8;
-                    mv->memoria[direccion + i] = (valor >> shiff) & 0xFF;
+                    //int shift = i * 8;
+                    int shift = (3 - i) * 8;
+                    mv->memoria[direccion + i] = ((unsigned int)valor >> shift) & 0xFF;
                 }
 
                 //printf("EV: Memoria [%d] escrita con %d, verificado: %d\n", direccion, valor, verificado);

@@ -56,30 +56,36 @@
 	"Funciones.h"
 	"Operaciones.h"
 
-1745625255 source:c:\users\ivan_\documents\facultad\3año\arquitectura_de_computadoras\maquina_virtual\maquinavirtual2025\main.c
+1748119600 source:c:\users\ivan_\documents\facultad\3año\arquitectura_de_computadoras\maquina_virtual\maquinavirtual2025\main.c
 	<stdio.h>
 	<stdlib.h>
 	<stdint.h>
+	<ctype.h>
 	<string.h>
 	"MVTipos.h"
 	"Operaciones.h"
 	"Funciones.h"
 
-1745469767 c:\users\ivan_\documents\facultad\3año\arquitectura_de_computadoras\maquina_virtual\maquinavirtual2025\mvtipos.h
+1748033714 c:\users\ivan_\documents\facultad\3año\arquitectura_de_computadoras\maquina_virtual\maquinavirtual2025\mvtipos.h
 
-1744296904 c:\users\ivan_\documents\facultad\3año\arquitectura_de_computadoras\maquina_virtual\maquinavirtual2025\operaciones.h
+1748033714 c:\users\ivan_\documents\facultad\3año\arquitectura_de_computadoras\maquina_virtual\maquinavirtual2025\operaciones.h
 
-1745277355 c:\users\ivan_\documents\facultad\3año\arquitectura_de_computadoras\maquina_virtual\maquinavirtual2025\funciones.h
+1748033714 c:\users\ivan_\documents\facultad\3año\arquitectura_de_computadoras\maquina_virtual\maquinavirtual2025\funciones.h
 
-1745445139 source:c:\users\ivan_\documents\facultad\3año\arquitectura_de_computadoras\maquina_virtual\maquinavirtual2025\operaciones.c
+1748033714 source:c:\users\ivan_\documents\facultad\3año\arquitectura_de_computadoras\maquina_virtual\maquinavirtual2025\operaciones.c
 	<stdio.h>
+	<stdlib.h>
+	<stdint.h>
+	<ctype.h>
 	"MVTipos.h"
 	"Funciones.h"
 	"Operaciones.h"
 
-1745629932 source:c:\users\ivan_\documents\facultad\3año\arquitectura_de_computadoras\maquina_virtual\maquinavirtual2025\funciones.c
+1748126351 source:c:\users\ivan_\documents\facultad\3año\arquitectura_de_computadoras\maquina_virtual\maquinavirtual2025\funciones.c
 	<stdio.h>
 	<stdlib.h>
+	<stdint.h>
+	<string.h>
 	<time.h>
 	"MVTipos.h"
 	"Operaciones.h"
