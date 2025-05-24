@@ -352,7 +352,7 @@ TArgs parsearArgumentos(int argc, char *argv[]) {
             if (valido) {
                 a.tamMemoriaKiB = atoi(num);
             } else {
-                fprintf(stderr,"Aviso: 'm=%s' inválido, usando 16 KiB\n", num);
+                printf("Aviso: 'm=%s' inválido, usando 16 KiB\n", num);
             }
             continue;
         }
@@ -377,7 +377,7 @@ TArgs parsearArgumentos(int argc, char *argv[]) {
         }
 
         // 6) Argumento desconocido
-        fprintf(stderr, "Advertencia: argumento desconocido '%s'\n", argv[i]);
+        printf("Advertencia: argumento desconocido '%s'\n", argv[i]);
     }
 
     return a;
@@ -460,7 +460,7 @@ int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod) {
             baseParam += args.cantidadParametros * 4;
         }
         size_t tamParam = baseParam;
-        size_t baseConst = baseParam;              // justo tras Param
+        size_t baseConst = tamParam;              // justo tras Param
         size_t baseCode  = baseConst + tamConst;   // justo tras Const
 
         // Validar que los segmentos entren en la memoria total

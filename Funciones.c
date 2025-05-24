@@ -109,6 +109,7 @@ int leerValor(TMV *mv, TOperando op) {
                 }
                 //printf("LV: Leer MEMORIA: %d\n", val);
 
+                // Extiende a 4 bytes
                 if (bytes == 2) {
                     val = (val << 16) >> 16;
                 } else {
@@ -187,11 +188,11 @@ void escribirValor(TMV *mv, TOperando op, int valor) {
                 }
             }
 
-            // Valido los limites de escritura
+            // Valido los limites de escritura MOV W[X] [Y]
             if (esDireccionValida(mv, selector, direccion, bytes)) {
                 for (int i = 0; i < bytes; i++) {
-                    int shift = (bytes - 1 - i) * 8;
-                    mv->memoria[direccion + i] = (valor >> shift) & 0xFF;
+                    int shiff = i * 8;
+                    mv->memoria[direccion + i] = (valor >> shiff) & 0xFF;
                 }
 
                 //printf("EV: Memoria [%d] escrita con %d, verificado: %d\n", direccion, valor, verificado);
@@ -374,18 +375,31 @@ void leerString(TMV *mv) {
     // Limite segun CX, si CX == 0xFFFF (-1) no limitamos la lectura
     int32_t ecxVal = mv->registros[ECX];
     int16_t limite = (int16_t)(ecxVal & 0xFFFF);
-    int unlimited  = (limite == (int16_t)-1);
 
-    // Leemos caracteres hasta '\n', EOF o alcanzar el maximo
-    int contador = 0;
-    int c;
-    // REVISAR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    while ( ((c = getchar()) != '\n') && (c != EOF) && (unlimited || contador < limite)) {
-        mv->memoria[addr + contador++] = (unsigned char)c;
+    char Texto[300];
+    scanf("%s ", Texto);
+    int L = strlen(Texto);
+    int i = 0;
+    uint16_t byte;
+    if (limite == -1){
+        while( i < L){
+            byte = Texto[i];
+            mv->memoria[addr + i] = byte;
+            i++;
+        }
+    }
+    else{
+        while(i < limite && i < L){
+            byte = Texto[i];
+            mv->memoria[addr + i] = byte;
+            i++;
+        }
     }
 
     // Escribimos el terminador nulo
-    mv->memoria[addr + contador] = '\0';
+    if (L > limite){
+        mv->memoria[addr + i] = '\0';
+    }
 }
 
 void escribirString(TMV *mv) {
@@ -407,7 +421,7 @@ void limpiarPantalla() {
     // Codigo ANSI:
     //  \x1B[2J  → borra toda la pantalla
     //  \x1B[H   → mueve el cursor a la posición (1,1)
-    printf("\x1B[2J\x1B[H");
+    printf("\x1B[2J\x1B[H"); //chequear!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     fflush(stdout);
 }
 
@@ -430,9 +444,8 @@ void breakPoint(TMV *mv) {
     while (1) {
         printf("Breakpoint> (g=go, q=quit, Enter=step): ");
 
-        int ch = getchar();
-        // consumir resto de linea para no tener basura en el buffer
-        while (ch != '\n' && ch != EOF) ch = getchar();
+        char ch;
+        scanf("%c", &ch);
 
         if (ch == '\n') {
             // step: ejecutar una instrucción mas y volver aqui
@@ -461,7 +474,7 @@ int generarImagenVMI(TMV *mv, const char *nombreImagen) {
 
     // Header "VMI25" + versión
     fwrite("VMI25", 1, 5, archImagen);
-    unsigned char version = 1;
+    unsigned char version = 2;
     fwrite(&version, 1, 1, archImagen);
 
     // Memoria en KiB
