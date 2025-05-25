@@ -31,7 +31,7 @@ const char *regNombres[] = {
 };
 
 void Disassembler(const TMV *MV, int tamCod) {
-    printf("\n>> Código assembler cargado en memoria:\n");
+    printf("\n>> Codigo assembler cargado en memoria:\n");
 
     // Calculamos la direccion fisica inicial del Code Segment
     uint32_t  csReg = MV->registros[CS];
@@ -65,7 +65,7 @@ void Disassembler(const TMV *MV, int tamCod) {
 
     printf("\nError flag %d\n", MV->ErrorFlag);
     if (!hayStop) {
-        printf("\nAdvertencia: STOP no presente en el código Assembler\n");
+        printf("\nAdvertencia: STOP no presente en el codigo Assembler\n");
     }
 }
 

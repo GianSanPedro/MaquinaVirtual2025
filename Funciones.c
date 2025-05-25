@@ -104,24 +104,11 @@ int leerValor(TMV *mv, TOperando op) {
             }
 
             if (esDireccionValida(mv, selector, direccion, bytes)) {
-                //int val = 0;
-                uint32_t val = 0;
-                for (int i = 0; i < bytes; i++) {
-                    int shift = i * 8;
-                    val = (val << shift) | (unsigned char)mv->memoria[direccion + i];
-                  //val = (val << 8) | (unsigned char)mv->memoria[direccion + i];
-                }
-                //printf("LV: Leer MEMORIA: %d\n", val);
-
-                // Extiende a 4 bytes
-                if (bytes == 2) {
-                    val = (val << 16) >> 16;
-                } else {
-                    if (bytes == 1) {
-                        val = (val << 24) >> 24;
-                    }
-                }
-
+               int val = 0;
+                for (int i = 0; i < bytes; i++)
+                    val = (val << 8) | (unsigned char)mv->memoria[direccion + i];
+                if (bytes < 4)  // extensión de signo
+                    val = (val << (32 - 8*bytes)) >> (32 - 8*bytes);
                 return val;
             }
             else
@@ -195,11 +182,9 @@ void escribirValor(TMV *mv, TOperando op, int valor) {
             // Valido los limites de escritura MOV W[X] [Y]
             if (esDireccionValida(mv, selector, direccion, bytes)) {
                 for (int i = 0; i < bytes; i++) {
-                    //int shift = i * 8;
-                    int shift = (3 - i) * 8;
-                    mv->memoria[direccion + i] = ((unsigned int)valor >> shift) & 0xFF;
+                    int shift = 8*(bytes - 1 - i);
+                    mv->memoria[direccion + i] = (valor >> shift) & 0xFF;
                 }
-
                 //printf("EV: Memoria [%d] escrita con %d, verificado: %d\n", direccion, valor, verificado);
             } else {
                 printf("EV: ERROR - Direccion invalida al escribir en memoria\n");

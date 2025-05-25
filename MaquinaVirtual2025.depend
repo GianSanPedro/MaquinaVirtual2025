@@ -22,10 +22,11 @@
 
 1744344602 c:\users\gianfranco\documents\proyectos c arquitectura\maquinavirtual2025\funciones.h
 
-1748106075 source:c:\users\gianfranco\documents\proyectos c arquitectura\maquinas virtuales\maquinavirtual2025\funciones.c
+1748145520 source:c:\users\gianfranco\documents\proyectos c arquitectura\maquinas virtuales\maquinavirtual2025\funciones.c
 	<stdio.h>
 	<stdlib.h>
 	<stdint.h>
+	<string.h>
 	<time.h>
 	"MVTipos.h"
 	"Operaciones.h"
