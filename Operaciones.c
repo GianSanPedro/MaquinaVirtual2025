@@ -30,7 +30,7 @@ const char *regNombres[] = {
     "EFX"  // 15
 };
 
-void Disassembler(const TMV *MV, int tamCod) {
+void Disassembler(const TMV *MV) {
     printf("\n>> Codigo assembler cargado en memoria:\n");
 
     // Calculamos la direccion fisica inicial del Code Segment
@@ -39,7 +39,7 @@ void Disassembler(const TMV *MV, int tamCod) {
     uint32_t  offsetCS = csReg & 0xFFFF;                 // offset (normalmente 0 al iniciar)
     uint32_t  baseCS = MV->TDS[selectorCS] >> 16;        // base fisica del segmento
     uint32_t  inicio = baseCS + offsetCS;                // inicio en MV memoria
-    uint32_t  finCS = baseCS + tamCod;                   // fin (no inclusive)
+    uint32_t  finCS = MV->TDS[selectorCS] & 0xFFFF;      // fin (no inclusive)
 
     uint32_t entryOff  = MV->registros[IP] & 0xFFFF;        // Entry Point
     uint32_t entryAdrr = baseCS + entryOff;                 // Direccion a marcar >

@@ -1,5 +1,5 @@
 
-void Disassembler(const TMV *mv, int tamCod);
+void Disassembler(const TMV *mv);
 void MostrarConstantes(TMV *mv);
 void MostrarInstruccion(TInstruccion inst, char *memoria);
 void MostrarOperando(TOperando op);

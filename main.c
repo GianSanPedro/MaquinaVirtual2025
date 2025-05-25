@@ -12,10 +12,10 @@ TInstruccion LeerInstruccionCompleta(TMV *MV, int ip);
 int esIPValida(TMV *mv);
 void reportEstado(int estado);
 TArgs parsearArgumentos(int argc, char *argv[]);
-int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod);
+void cargarArchivoVMX(const char *nombreArch, TMV *MV);
 void configurarSegmentos(TMV *mv, unsigned short tamConst, unsigned short tamCode, unsigned short tamData, unsigned short tamExtra, unsigned short tamStack, unsigned short entryOffset);
 void initSubRutinaPrincipal(TMV *mv);
-int cargarImagenVMI(const char *nombreImagen, TMV *MV, int *tamCod);
+void cargarImagenVMI(const char *nombreImagen, TMV *MV);
 
 int main(int argc, char *argv[]){
 
@@ -27,7 +27,6 @@ int main(int argc, char *argv[]){
     int BandStop = 0;
     TInstruccion InstruccionActual;                         // Para cargar la instruccion act
     unsigned int ipActual;                                  // Instruction Pointer
-    int tamCod;                                             // Para leer el tamanio del codigo
 
     // Lectura argumentos de la Consola, necesitare el vmi para el breakPoint
     MV.args = parsearArgumentos(argc, argv);
@@ -56,9 +55,7 @@ int main(int argc, char *argv[]){
 
     // Caso A: Solo Imagen .vmi
     if (!MV.args.nombreArchVmx && MV.args.nombreArchVmi) {
-        int err = cargarImagenVMI(MV.args.nombreArchVmi, &MV, &tamCod);
-        if (err)
-            return err;
+        cargarImagenVMI(MV.args.nombreArchVmi, &MV);
     }
     else{
         // Caso B: Tenemos .vmx y opcionalmente .vmi para depuracion mas adelante
@@ -69,26 +66,27 @@ int main(int argc, char *argv[]){
             printf(">> Error: no se pudo reservar %lu bytes de memoria\n",(unsigned long)memBytes);
             return 1;
         }
-
-        int err = cargarArchivoVMX(MV.args.nombreArchVmx, &MV, &tamCod);
-        if (err) //despues planteo mensaje de posibles errores
-            return err;
+        cargarArchivoVMX(MV.args.nombreArchVmx, &MV);
     }
-
-    // CODIGO VIEJO DESPUES ACTUALIZO!
 
     // Imprimo Disassembler
     if (MV.args.modoDisassembler) {
-        Disassembler(&MV, tamCod);
+        Disassembler(&MV);
     }
+
+    // Calculo tamaño del Code Segment
+    uint16_t selectorCS = MV.registros[CS] >> 16;
+    uint16_t tamCod = (uint16_t)(MV.TDS[selectorCS] & 0xFFFF);
 
     //Comienza la ejecucion
     printf("\n>> Tamanio codigo: %d\n", tamCod);
 
     printf("\n>> Tabla de Segmentos seteada\n");
-    for (int i = 0; i < 7; i++) {
+    int i = 0;
+    while (i < 7 && MV.TDS[i] != -1) {
         int base = MV.TDS[i] >> 16;
         int limite = MV.TDS[i] & 0xFFFF;
+        i++;
         printf("TDS[%d] -> base: %d (0x%04X), tamanio: %d (0x%04X)\n", i, base, base, limite, limite);
     }
 
@@ -383,11 +381,11 @@ TArgs parsearArgumentos(int argc, char *argv[]) {
     return a;
 }
 
-int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod) {
+void cargarArchivoVMX(const char *nombreArch, TMV *MV) {
     FILE *archVmx = fopen(nombreArch, "rb");
     if (!archVmx) {
         printf("\n>> Error: arch vmx no se pudo abrir '%s'\n", nombreArch);
-        return 1;
+        MV->ErrorFlag = 10;
     }
 
     // Leo el identificador "VMX25" (5 bytes) y version (1 byte)
@@ -407,7 +405,6 @@ int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod) {
         fread(&high, sizeof(high), 1, archVmx);
         fread(&low,  sizeof(low),  1, archVmx);
         tamCode = (high << 8) | low;
-        *tamCod = tamCode;
         tamData  = (unsigned int)(MV->memSize - tamCode);
 
         // Validar que CodeSegment entre en la memoria
@@ -415,7 +412,6 @@ int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod) {
             printf("\n>> Error: Codigo (%u bytes) excede memoria (%lu bytes)\n",tamCode, (unsigned long)MV->memSize);
             MV->ErrorFlag = 4;
             fclose(archVmx);
-            return 2;
         }
 
         // Cargar la totalidad del CodeSegment
@@ -426,7 +422,6 @@ int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod) {
         fread(&high, sizeof(high), 1, archVmx);
         fread(&low,  sizeof(low),  1, archVmx);
         tamCode = (high << 8) | low;
-        *tamCod = tamCode;
 
         fread(&high, sizeof(high), 1, archVmx);
         fread(&low,  sizeof(low),  1, archVmx);
@@ -469,7 +464,6 @@ int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod) {
             printf("\n>> Error: Segmentos totales (%lu bytes) exceden memoria (%lu bytes)\n", (unsigned long)totalSegs,(unsigned long)MV->memSize);
             MV->ErrorFlag = 4;
             fclose(archVmx);
-            return 2;
         }
 
         // Leo Code Segment en su posición real
@@ -489,12 +483,10 @@ int cargarArchivoVMX(const char *nombreArch, TMV *MV, int *tamCod) {
     if ( MV->version == 2){
         initSubRutinaPrincipal(MV);
     }
-
-    return 0;
 }
 
 void configurarSegmentos(TMV *mv, unsigned short tamConst, unsigned short tamCode, unsigned short tamData, unsigned short tamExtra, unsigned short tamStack, unsigned short entryOffset){
-    size_t base = 0;     // dirección fisica donde empieza el proximo segmento
+    size_t base = 0;     // direccion fisica donde empieza el proximo segmento
     int    idx  = 0;     // indice en mv->TDS para la siguiente entrada
 
     int idxParam = -1, idxConst = -1, idxCode = -1;
@@ -507,6 +499,10 @@ void configurarSegmentos(TMV *mv, unsigned short tamConst, unsigned short tamCod
     mv->registros[SS] = 0xFFFFFFFF;
     mv->registros[KS] = 0xFFFFFFFF;
     mv->registros[SP] = 0xFFFFFFFF;
+
+    for (int i = 0; i < 7; i++) {
+         mv->TDS[i] = 0xFFFFFFFF;
+    }
 
     //Para simplificar
     TArgs args = mv->args;
@@ -653,11 +649,11 @@ void initSubRutinaPrincipal(TMV *mv) {
     }
 }
 
-int cargarImagenVMI(const char *nombreImagen, TMV *MV, int *tamCod){
+void cargarImagenVMI(const char *nombreImagen, TMV *MV){
     FILE *arch = fopen(nombreImagen, "rb");
     if (!arch) {
         printf("\n>> Error: arch Vmi no se pudo abrir imagen '%s'\n", nombreImagen);
-        return 1;
+        MV->ErrorFlag = 10;
     }
 
     // Leo identificador "VMI25" (5 bytes) y version (1 byte)
@@ -680,7 +676,7 @@ int cargarImagenVMI(const char *nombreImagen, TMV *MV, int *tamCod){
     if (!MV->memoria) {
         printf("\n>> Error: no se pudo reservar %lu bytes para la memoria\n",(unsigned long)memBytes);
         fclose(arch);
-        return 2;
+        MV->ErrorFlag = 10;
     }
 
     // Leemos los registros (16 x 4 bytes, big-endian)
@@ -706,13 +702,6 @@ int cargarImagenVMI(const char *nombreImagen, TMV *MV, int *tamCod){
     // Leemos la memoria principal
     fread(MV->memoria, 1, memBytes, arch);
     fclose(arch);
-
-    // Extraemos el tamaño de Code Segment de la TDS: selector en CS, offset 0
-    unsigned int selCS = MV->registros[CS] >> 16;
-    unsigned short codeSize = (unsigned short)(MV->TDS[selCS] & 0xFFFF);
-    *tamCod = codeSize;
-
-    return 0;
 }
 
 
