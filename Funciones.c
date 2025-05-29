@@ -105,6 +105,7 @@ int leerValor(TMV *mv, TOperando op) {
                int val = 0;
                 for (int i = 0; i < bytes; i++)
                     val = (val << 8) | (unsigned char)mv->memoria[direccion + i];
+
                 if (bytes < 4)  // extensión de signo
                     val = (val << (32 - 8*bytes)) >> (32 - 8*bytes);
                 return val;
@@ -808,22 +809,29 @@ void POP(TMV *mv, TOperando op1) {
 
     // Comprobamos el STACK UNDERFLOW: debe haber al menos 4 bytes en la pila
     uint16_t segSize  = mv->TDS[selector] & 0xFFFF;
+
     if ((uint32_t)offset + 4 > segSize) {
+        printf("ERROR: Stack underflow en POP en [%.4X] (BP estaba en %d, offset %d, tam %d)\n",
+               mv->registros[IP], mv->registros[BP], offset, segSize);
+        mv->ErrorFlag = 6;
+        return;
+    }
+
+    if (offset >= segSize) {
         printf("ERROR: Stack underflow en POP en [%.4X]\n", mv->registros[IP]);
         mv->ErrorFlag = 6;
         return;
     }
 
     // Calculamos la direccion fisica del tope de pila
-    uint32_t base = mv->TDS[selector] >> 16;
+    uint16_t base = mv->TDS[selector] >> 16;
     uint32_t addr = base + offset;
 
     // Leemos 4 bytes en big-endian: MSB en addr, LSB en addr+3
-    int32_t val =
-        ((int32_t)mv->memoria[addr] << 24) |
-        ((int32_t)mv->memoria[addr + 1] << 16) |
-        ((int32_t)mv->memoria[addr + 2] <<  8) |
-        ((int32_t)mv->memoria[addr + 3] <<  0);
+    int32_t val = 0;
+    for (int i = 0; i < 4; i++){
+        val = (val << 8) | (unsigned char)mv->memoria[addr + i];
+    }
 
     // Escribimos el valor extraido en el operando (trunca si < 4 bytes)
     escribirValor(mv, op1, val);
@@ -857,17 +865,18 @@ void RET(TMV *mv, TOperando op_unused) {
     uint16_t selector  = spValue >> 16;    // selector de SS
     uint16_t offset    = spValue & 0xFFFF; // offset dentro del SS
 
+    // Calculo la direccion fisica del tope de pila
+    uint32_t base = mv->TDS[selector] >> 16;
+    uint32_t addr = base + offset;
+
     // Compruebo STACK UNDERFLOW: debe haber al menos 4 bytes
     uint16_t segSize   = mv->TDS[selector] & 0xFFFF;
-    if ((uint32_t)offset + 4 > segSize) {
+
+    if ((uint32_t)offset >= segSize) {
         printf("ERROR: Stack underflow en RET en [%.4X]\n", mv->registros[IP]);
         mv->ErrorFlag = 6;
         return;
     }
-
-    // Calculo la direccion fisica del tope de pila
-    uint32_t base = mv->TDS[selector] >> 16;
-    uint32_t addr = base + offset;
 
     // Leemos 4 bytes en big-endian y reconstruir el valor de retorno
     uint32_t b0 = mv->memoria[addr];
@@ -875,6 +884,7 @@ void RET(TMV *mv, TOperando op_unused) {
     uint32_t b2 = mv->memoria[addr + 2];
     uint32_t b3 = mv->memoria[addr + 3];
     int32_t  retVal = (int32_t)((b0 << 24) | (b1 << 16) | (b2 << 8) | b3);
+
 
     // Cargamos IP con el valor extraido (salto de retorno)
     mv->registros[IP] = (uint32_t)retVal;
