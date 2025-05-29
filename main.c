@@ -126,11 +126,11 @@ int main(int argc, char *argv[]){
             }
         }
         if (MV.Aborted) {
-            printf("Ejecucion abortada por usuario.\n");
+            printf("\nEjecucion abortada por usuario.\n");
         } else if (MV.ErrorFlag) {
-            printf("Ejecucion detenida por error.\n");
+            printf("\nEjecucion detenida por error.\n");
         } else if (BandStop) {
-            printf("Ejecucion detenida por STOP (opcode 0x0F).\n");
+            printf("\nEjecucion detenida por STOP (opcode 0x0F).\n");
         }
     }
     else{

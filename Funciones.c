@@ -692,7 +692,7 @@ void SYS(TMV *mv, TOperando op1) {
 
 void JMP(TMV *mv, TOperando op1) {
     int destino = leerValor(mv, op1);
-    mv->registros[IP] = destino;
+    mv->registros[IP] = (mv->registros[IP] & 0xFFFF0000) | (destino & 0xFFFF);
 }
 
 void JZ(TMV *mv, TOperando op1) {
@@ -701,7 +701,7 @@ void JZ(TMV *mv, TOperando op1) {
     // Verifica si el bit Z (bit 30) esta encendido
     if (cc & (1 << 30)) {
         int destino = leerValor(mv, op1);
-        mv->registros[IP] = destino;
+        mv->registros[IP] = (mv->registros[IP] & 0xFFFF0000) | (destino & 0xFFFF);
     }
 }
 
@@ -711,7 +711,7 @@ void JP(TMV *mv, TOperando op1) {
     // Verificar que bit N (31) y Z (30) estén en 0
     if ((cc & (1 << 31)) == 0 && (cc & (1 << 30)) == 0) {
         int destino = leerValor(mv, op1);
-        mv->registros[IP] = destino;
+        mv->registros[IP] = (mv->registros[IP] & 0xFFFF0000) | (destino & 0xFFFF);
     }
 }
 
@@ -721,7 +721,7 @@ void JN(TMV *mv, TOperando op1) {
     // Verifica si el bit N (bit 31) esta activado
     if (cc & (1 << 31)) {
         int destino = leerValor(mv, op1);
-        mv->registros[IP] = destino;
+        mv->registros[IP] = (mv->registros[IP] & 0xFFFF0000) | (destino & 0xFFFF);
     }
 }
 
@@ -731,7 +731,7 @@ void JNZ(TMV *mv, TOperando op1) {
     // Verifica si el bit Z (bit 30) esta en 0
     if ((cc & (1 << 30)) == 0) {
         int destino = leerValor(mv, op1);
-        mv->registros[IP] = destino;
+        mv->registros[IP] = (mv->registros[IP] & 0xFFFF0000) | (destino & 0xFFFF);
     }
 }
 
@@ -741,7 +741,7 @@ void JNP(TMV *mv, TOperando op1) {
     // Si N = 1 o Z = 1 → salta
     if ((cc & (1 << 31)) || (cc & (1 << 30))) {
         int destino = leerValor(mv, op1);
-        mv->registros[IP] = destino;
+        mv->registros[IP] = (mv->registros[IP] & 0xFFFF0000) | (destino & 0xFFFF);
     }
 }
 
@@ -751,7 +751,7 @@ void JNN(TMV *mv, TOperando op1) {
     // Verifica si el bit N (bit 31) esta en 0
     if ((cc & (1 << 31)) == 0) {
         int destino = leerValor(mv, op1);
-        mv->registros[IP] = destino;
+        mv->registros[IP] = (mv->registros[IP] & 0xFFFF0000) | (destino & 0xFFFF);
     }
 }
 
