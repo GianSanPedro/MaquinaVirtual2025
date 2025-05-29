@@ -678,7 +678,7 @@ void cargarImagenVMI(const char *nombreImagen, TMV *MV){
     fread(identificador, sizeof(identificador), 1, arch);
     fread(&version, sizeof(version), 1, arch);
     //printf("\n>> VERSION %d\n", version);
-    MV->version = version;
+    MV->version = 2;
 
     // Leo el tamaño de memoria (KiB)
     unsigned char high, low;
