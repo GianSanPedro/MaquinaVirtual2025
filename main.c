@@ -77,8 +77,9 @@ int main(int argc, char *argv[]){
 
     // Calculo tamaño del Code Segment
     uint16_t selectorCS = MV.registros[CS] >> 16;
-    uint16_t tamCod = (uint16_t)(MV.TDS[selectorCS] & 0xFFFF);
-
+    uint16_t baseCS = MV.TDS[selectorCS] >> 16;
+    uint16_t tamCod = MV.TDS[selectorCS] & 0xFFFF;
+    uint16_t finCS = baseCS + tamCod;
     //Comienza la ejecucion
     printf("\n>> Tamanio codigo: %d\n", tamCod);
 
@@ -93,10 +94,10 @@ int main(int argc, char *argv[]){
 
     printf("\n>> Codigo assembler en ejecucion:\n");
     printf("VERSION: %d \n", MV.version);
+
     if (MV.version == 2){
         ipActual = obtenerIP(&MV);
-        while (ipActual < tamCod && !BandStop && !MV.ErrorFlag && !MV.Aborted) {
-            ipActual = obtenerIP(&MV);
+        while (ipActual < finCS && !BandStop && !MV.ErrorFlag && !MV.Aborted) {
             if (!esIPValida(&MV)) {
                 printf("ERROR: IP fuera del Segmento de Codigo: [%.4X] (%d)\n", MV.registros[IP], MV.registros[IP]);
                 MV.ErrorFlag = 2;
@@ -112,9 +113,11 @@ int main(int argc, char *argv[]){
                     BandStop = 1;
                 } else {
                     printf("\n");
-                    //printf("\nIP ACTUAL: %d: \n", ipActual);
+                    //printf("\nIP ACTUAL antes de procesar: %d: \n", ipActual);
                     MostrarInstruccion(InstruccionActual, MV.memoria);
                     procesarInstruccion(&MV, InstruccionActual);
+                    ipActual = obtenerIP(&MV);
+                    //printf("\nIP ACTUAL despues de procesar: %d: \n", obtenerIP(&MV));
                 }
             }
 
@@ -302,7 +305,6 @@ int esIPValida(TMV *MV) {
 uint32_t obtenerIP(TMV *MV) {
     uint32_t selectorIP = (MV->registros[IP]) >> 16;
     uint32_t offsetIP = (MV->registros[IP]) &0xFFFF;
-
     uint32_t  baseIP = MV->TDS[selectorIP] >> 16;
     uint32_t  direccion = baseIP + offsetIP;
 

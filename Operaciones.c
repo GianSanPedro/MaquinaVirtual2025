@@ -134,7 +134,7 @@ void MostrarConstantes(TMV *mv) {
             // imprimir ASCII completo entre comillas
             printf("| \"");
             uint32_t j = 0;
-            while (j < longitud) {
+            while (j < longitud -1 && mv->memoria[inicio + j] != 0) {
                 unsigned char c = mv->memoria[inicio + j];
                 if (c == 0) {
                     printf("\\0");

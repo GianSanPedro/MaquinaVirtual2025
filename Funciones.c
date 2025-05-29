@@ -29,7 +29,7 @@ int leerValor(TMV *mv, TOperando op) {
             int valor = mv->registros[(int)op.registro];
             switch (op.segmentoReg) {
                 case 0: {
-                    printf("LV reg: Leer REGISTRO: %d\n", valor);
+                    //printf("LV reg: Leer REGISTRO: %d\n", valor);
                     return valor;                                   // EAX completo
                     break;
                 }
@@ -60,7 +60,7 @@ int leerValor(TMV *mv, TOperando op) {
         }
 
         case 2: { // Inmediato de 16 bits
-            printf("LV: Leer INMEDIATO: %d\n", op.valor);
+            //printf("LV: Leer INMEDIATO: %d\n", op.valor);
             int valor = op.valor & 0xFFFF;
             valor = valor << 16;
             valor = valor >> 16;
@@ -80,13 +80,13 @@ int leerValor(TMV *mv, TOperando op) {
                 selector = contenido >> 16;
                 offset_registro = contenido & 0xFFFF;
             }
-            printf("DEBUG: Acceso a memoria: reg base 0x%08X (selector: %d, offset: %d)\n", mv->registros[(int)op.registro], selector, offset_registro);
+            //printf("DEBUG: Acceso a memoria: reg base 0x%08X (selector: %d, offset: %d)\n", mv->registros[(int)op.registro], selector, offset_registro);
 
             int offset_instruc = op.desplazamiento;             // obtenemos el offset (dentro del segmento) del operando de la instruccion
             int base = mv->TDS[selector] >> 16;                 // obtenemos la base fisica del segmento
             int direccion = base + offset_registro + offset_instruc;
 
-            printf("LV: Leer de direccion fisica: %d (0x%04X)  selector: %d  base: %d  offset_reg: %d  offset_instr: %d\n", direccion, direccion, selector, base, offset_registro, offset_instruc);
+            //printf("LV: Leer de direccion fisica: %d (0x%04X)  selector: %d  base: %d  offset_reg: %d  offset_instr: %d\n", direccion, direccion, selector, base, offset_registro, offset_instruc);
 
             // Determino cuantos bytes leer
             int bytes;
@@ -122,7 +122,7 @@ void escribirValor(TMV *mv, TOperando op, int valor) {
     switch (op.tipo) {
         case 1: { // Registro
             unsigned int *reg = &mv->registros[(int)op.registro];
-            printf("TEST ESCRIBO REG, valor: %d , segmentOp: %d, tipo: %d \n\n", valor, op.segmentoReg, op.tipo);
+            //printf("TEST ESCRIBO REG, valor: %d , segmentOp: %d, tipo: %d \n\n", valor, op.segmentoReg, op.tipo);
             switch (op.segmentoReg) {
                 case 0:                                             // Registro completo (EAX)
                     *reg = valor;
@@ -162,7 +162,7 @@ void escribirValor(TMV *mv, TOperando op, int valor) {
             int direccion = base + offset_registro + offset_instruc;
 
             //printf("EV: Escribir en direccion fisica: %d (0x%04X)  selector: %d  base: %d  offset_reg: %d  offset_instr: %d\n", direccion, direccion, selector, base, offset_registro, offset_instruc);
-            printf("EV: Valor a escribir = %d\n", valor);
+            //printf("EV: Valor a escribir = %d\n", valor);
 
             // Calcular cuantos bytes escribir segun tamCelda
             int bytes;
