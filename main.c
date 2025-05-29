@@ -112,9 +112,9 @@ int main(int argc, char *argv[]){
                 if (InstruccionActual.codOperacion == 0x0F) {
                     BandStop = 1;
                 } else {
-                    printf("\n");
+                    //printf("\n");
                     //printf("\nIP ACTUAL antes de procesar: %d: \n", ipActual);
-                    MostrarInstruccion(InstruccionActual, MV.memoria);
+                    //MostrarInstruccion(InstruccionActual, MV.memoria);
                     procesarInstruccion(&MV, InstruccionActual);
                     ipActual = obtenerIP(&MV);
                     //printf("\nIP ACTUAL despues de procesar: %d: \n", obtenerIP(&MV));
@@ -644,16 +644,12 @@ void initSubRutinaPrincipal(TMV *mv) {
     }
 
     // Apilamos cada valor (big-endian y SP decrementa en 4)
-    for (int i = 0; i < 3; i++) {
-        offset -= 4;
+    for (int i = 2; i >= 0; i--) {
         if (offset < 0) {
             printf("ERROR: Stack overflow al inicializar main en [%.4X]\n", mv->registros[IP]);
             mv->ErrorFlag = 5;
             return;
         }
-
-        // actualizamos el SP con selector y nuevo offset
-        mv->registros[SP] = ((uint32_t)selector << 16) | ((uint16_t)offset & 0xFFFF);
 
         // dirección fisica donde escribir
         uint32_t addr = baseStack + offset;
@@ -664,6 +660,10 @@ void initSubRutinaPrincipal(TMV *mv) {
         mv->memoria[addr + 1] = (v >> 16) & 0xFF;
         mv->memoria[addr + 2] = (v >>  8) & 0xFF;
         mv->memoria[addr + 3] = (v >>  0) & 0xFF;
+
+        offset = offset - 4;
+        // actualizamos el SP con selector y nuevo offset
+        mv->registros[SP] = ((uint32_t)selector << 16) | ((uint16_t)offset & 0xFFFF);
     }
 }
 

@@ -48,7 +48,7 @@ void Disassembler(const TMV *MV) {
     uint32_t ipTemp = inicio;
     int hayStop = 0;
 
-    if(MV->version == 2){
+    if(MV->version == 2 && MV->registros[KS]!= -1){
         printf("\n>> Constantes cargadas en memoria:\n");
         MostrarConstantes(MV);
     }

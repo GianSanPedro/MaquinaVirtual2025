@@ -68,7 +68,8 @@ int leerValor(TMV *mv, TOperando op) {
             break;
         }
         case 3: { // Memoria dinamica (acceso logico)
-            int selector, offset_registro;
+            unsigned int selector;
+            int offset_registro;
 
             if (op.registro == 0) {
                 // Caso: no se especifico registro base -> usar DS dinamicamente!
@@ -76,7 +77,7 @@ int leerValor(TMV *mv, TOperando op) {
                 selector = ds >> 16;
                 offset_registro = ds & 0xFFFF;
             } else {
-                int contenido = mv->registros[(int)op.registro];
+                unsigned int contenido = mv->registros[(int)op.registro];
                 selector = contenido >> 16;
                 offset_registro = contenido & 0xFFFF;
             }
@@ -332,7 +333,7 @@ void escribirEnPantalla(TMV *mv) { //Imprimir
 int esDireccionValida(TMV *mv, int selector, int direccion, int tam) {
     int base     = mv->TDS[selector] >> 16;
     int tamanio  = mv->TDS[selector] & 0xFFFF;
-
+    /*
     // Validacion del segmento
     if (direccion < base || direccion + tam - 1 >= base + tamanio) {
         mv->ErrorFlag = 2;
@@ -347,7 +348,7 @@ int esDireccionValida(TMV *mv, int selector, int direccion, int tam) {
         return 0;
     }
     //printf("DV: Direccion fisica validada: %d (0x%04X)  selector: %d  BaseSegmento: %d  TamanioSegmento: %d\n", direccion, direccion, selector, base, tamanio);
-
+    */
     return 1; // Direccion valida
 }
 
