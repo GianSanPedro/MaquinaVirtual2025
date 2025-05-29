@@ -93,23 +93,20 @@ int main(int argc, char *argv[]){
 
     printf("\n>> Codigo assembler en ejecucion:\n");
     printf("VERSION: %d \n", MV.version);
-    ipActual = obtenerIP(&MV);
     if (MV.version == 2){
+        ipActual = obtenerIP(&MV);
         while (ipActual < tamCod && !BandStop && !MV.ErrorFlag && !MV.Aborted) {
             ipActual = obtenerIP(&MV);
-            printf("\nIP ACTUAL: %d: \n", ipActual);
             if (!esIPValida(&MV)) {
                 printf("ERROR: IP fuera del Segmento de Codigo: [%.4X] (%d)\n", MV.registros[IP], MV.registros[IP]);
                 MV.ErrorFlag = 2;
             }
-            printf("PROCESO 111\n");
             InstruccionActual = LeerInstruccionCompleta(&MV, ipActual);
 
             MV.registros[IP] += InstruccionActual.tamanio;
 
             // Verifico que no se haya detectado un error en la decodificacion antes de ejecutar
             if (!MV.ErrorFlag){
-                printf("PROCESO 222\n");
                 // Ejecutar o detectar STOP
                 if (InstruccionActual.codOperacion == 0x0F) {
                     BandStop = 1;
@@ -134,8 +131,10 @@ int main(int argc, char *argv[]){
         }
     }
     else{
-        while (MV.registros[IP] < tamCod && !BandStop && !MV.ErrorFlag) {
-            ipActual = MV.registros[IP];
+        ipActual = obtenerIP(&MV);
+        printf("\nIP ACTUAL: %d: \n", ipActual);
+        while (ipActual < tamCod && !BandStop && !MV.ErrorFlag) {
+            ipActual = obtenerIP(&MV);
             if (!esIPValida(&MV)) {
                 printf("ERROR: IP fuera del Segmento de Codigo: [%.4X] (%d)\n", MV.registros[IP], MV.registros[IP]);
                 MV.ErrorFlag = 2;
@@ -678,6 +677,7 @@ void cargarImagenVMI(const char *nombreImagen, TMV *MV){
     unsigned char version;
     fread(identificador, sizeof(identificador), 1, arch);
     fread(&version, sizeof(version), 1, arch);
+    //printf("\n>> VERSION %d\n", version);
     MV->version = version;
 
     // Leo el tamaño de memoria (KiB)

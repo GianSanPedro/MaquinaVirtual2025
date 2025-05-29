@@ -31,15 +31,16 @@ const char *regNombres[] = {
 };
 
 void Disassembler(const TMV *MV) {
-    printf("\n>> Codigo assembler cargado en memoria:\n");
-
     // Calculamos la direccion fisica inicial del Code Segment
     uint32_t  csReg = MV->registros[CS];
-    uint32_t  selectorCS = csReg >> 16;                  // selector
-    uint32_t  offsetCS = csReg & 0xFFFF;                 // offset (normalmente 0 al iniciar)
-    uint32_t  baseCS = MV->TDS[selectorCS] >> 16;        // base fisica del segmento
-    uint32_t  inicio = baseCS + offsetCS;                // inicio en MV memoria
-    uint32_t  finCS = MV->TDS[selectorCS] & 0xFFFF;      // fin (no inclusive)
+    uint32_t  selectorCS = csReg >> 16;                 // selector
+    uint32_t  offsetCS = csReg & 0xFFFF;                // offset (normalmente 0 al iniciar)
+
+    uint32_t  baseCS = MV->TDS[selectorCS] >> 16;       // base fisica del segmento
+    uint32_t  inicio = baseCS + offsetCS;               // inicio en MV memoria, offset deberia ser 0
+
+    uint32_t  tamCS = MV->TDS[selectorCS] & 0xFFFF;     // tamanio
+    uint32_t  finCS = baseCS + tamCS;                   // fin (no inclusive)
 
     uint32_t entryOff  = MV->registros[IP] & 0xFFFF;        // Entry Point
     uint32_t entryAdrr = baseCS + entryOff;                 // Direccion a marcar >
@@ -48,10 +49,11 @@ void Disassembler(const TMV *MV) {
     int hayStop = 0;
 
     if(MV->version == 2){
+        printf("\n>> Constantes cargadas en memoria:\n");
         MostrarConstantes(MV);
-        printf("\n");
     }
 
+    printf("\n>> Codigo assembler cargado en memoria:\n");
     while (ipTemp < finCS) {
         TInstruccion inst = LeerInstruccionCompleta(MV, ipTemp);
         if (inst.codOperacion == 0x0F) {
@@ -272,7 +274,7 @@ void MostrarOperando(TOperando op) {
 }
 
 void procesarInstruccion(TMV *mv, TInstruccion inst) {
-    unsigned int ip_backup = mv->registros[IP];
+    unsigned int ip_backup = obtenerIP(mv);
     switch (inst.codOperacion) {
         // Instrucciones de 2 operandos
         case 0x10: MOV(mv, inst.op1, inst.op2); break;
@@ -339,12 +341,12 @@ void procesarInstruccion(TMV *mv, TInstruccion inst) {
         case 0x07: JNN(mv, inst.op1); break;
     }
 
-    if (mv->registros[IP] != ip_backup && !(inst.codOperacion >= 0x01 && inst.codOperacion <= 0x07)) {
+    if ( obtenerIP(mv) != ip_backup && !(inst.codOperacion >= 0x01 && inst.codOperacion <= 0x07) && inst.codOperacion != 0x0D && inst.codOperacion != 0x0E ) {
         printf("Advertencia: IP fue modificado por una instruccion que no deberia: 0x%02X\n", inst.codOperacion);
     }
 
     // Verifico que los saltos no salgan del segmento
-    if ((inst.codOperacion >= 0x01 && inst.codOperacion <= 0x07) && !esIPValida(mv)) {
+    if ( ((inst.codOperacion >= 0x01 && inst.codOperacion <= 0x07) || inst.codOperacion == 0x0D || inst.codOperacion == 0x0E ) && !esIPValida(mv)) {
         printf("ERROR: Salto IP fuera del Segmento de Codigo: [%.4X] (%d)\n", mv->registros[IP], mv->registros[IP]);
         mv->ErrorFlag = 2;
     }
