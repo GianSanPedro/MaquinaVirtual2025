@@ -333,7 +333,7 @@ void escribirEnPantalla(TMV *mv) { //Imprimir
 int esDireccionValida(TMV *mv, int selector, int direccion, int tam) {
     int base     = mv->TDS[selector] >> 16;
     int tamanio  = mv->TDS[selector] & 0xFFFF;
-    /*
+
     // Validacion del segmento
     if (direccion < base || direccion + tam - 1 >= base + tamanio) {
         mv->ErrorFlag = 2;
@@ -348,7 +348,7 @@ int esDireccionValida(TMV *mv, int selector, int direccion, int tam) {
         return 0;
     }
     //printf("DV: Direccion fisica validada: %d (0x%04X)  selector: %d  BaseSegmento: %d  TamanioSegmento: %d\n", direccion, direccion, selector, base, tamanio);
-    */
+
     return 1; // Direccion valida
 }
 
@@ -777,7 +777,7 @@ void PUSH(TMV *mv, TOperando op1) {
     uint32_t newSP  = ((uint32_t)selector << 16) | ((uint16_t)newOff & 0xFFFF);
 
     // Comprobamos el stack overflow (offset negativo)
-    if (newSP < mv->registros[SS]) {
+    if (newOff < 0) {
         printf("ERROR: Stack overflow en PUSH en [%.4X]\n", mv->registros[IP]);
         mv->ErrorFlag = 5;
         return;
