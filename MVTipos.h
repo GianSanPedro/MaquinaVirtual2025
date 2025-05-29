@@ -42,7 +42,7 @@ typedef struct {
     char tipo;                      // 0: ninguno, 1: registro, 2: inmediato, 3: memoria
     char registro;                  // código de registro (0–15) si aplica (registro o memoria)
     char segmentoReg;               // para tipo registro: 00=EAX, 01=AL, 10=AH, 11=AX
-    unsigned short desplazamiento;  // para memoria (OffSet)
+    short desplazamiento;           // para memoria (OffSet)
     int tamCelda;                   // para memoria 0: long (l), 2: word (w), 3: byte (b)
     int valor;                      // para inmediato (o para lectura posterior)
 } TOperando;

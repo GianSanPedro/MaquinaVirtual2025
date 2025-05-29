@@ -245,7 +245,7 @@ TInstruccion LeerInstruccionCompleta(TMV *MV, int ip) {
         case 3: { // memoria
             unsigned char byte1 = (unsigned char) MV->memoria[cursor];
             unsigned char byte2 = (unsigned char) MV->memoria[cursor + 1];
-            inst.op2.desplazamiento = (byte1 << 8) | byte2;
+            inst.op2.desplazamiento = (short)((byte1 << 8) | byte2);
 
             unsigned char byte = (unsigned char) MV->memoria[cursor + 2];
             inst.op2.registro = (byte >> 4) & 0x0F;
@@ -274,7 +274,7 @@ TInstruccion LeerInstruccionCompleta(TMV *MV, int ip) {
         case 3: { // memoria
             unsigned char byte1 = (unsigned char) MV->memoria[cursor];
             unsigned char byte2 = (unsigned char) MV->memoria[cursor + 1];
-            inst.op1.desplazamiento = (byte1 << 8) | byte2;
+            inst.op1.desplazamiento = (short)((byte1 << 8) | byte2);
 
             unsigned char byte = (unsigned char) MV->memoria[cursor + 2];
             inst.op1.registro = (byte >> 4) & 0x0F;

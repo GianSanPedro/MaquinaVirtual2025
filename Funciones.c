@@ -82,8 +82,8 @@ int leerValor(TMV *mv, TOperando op) {
             }
             printf("DEBUG: Acceso a memoria: reg base 0x%08X (selector: %d, offset: %d)\n", mv->registros[(int)op.registro], selector, offset_registro);
 
-            int offset_instruc = op.desplazamiento;   // obtenemos el offset (dentro del segmento) del operando de la instruccion
-            int base = mv->TDS[selector] >> 16;       // obtenemos la base fisica del segmento
+            int offset_instruc = op.desplazamiento;             // obtenemos el offset (dentro del segmento) del operando de la instruccion
+            int base = mv->TDS[selector] >> 16;                 // obtenemos la base fisica del segmento
             int direccion = base + offset_registro + offset_instruc;
 
             printf("LV: Leer de direccion fisica: %d (0x%04X)  selector: %d  base: %d  offset_reg: %d  offset_instr: %d\n", direccion, direccion, selector, base, offset_registro, offset_instruc);
