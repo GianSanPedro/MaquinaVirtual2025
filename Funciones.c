@@ -810,13 +810,6 @@ void POP(TMV *mv, TOperando op1) {
     // Comprobamos el STACK UNDERFLOW: debe haber al menos 4 bytes en la pila
     uint16_t segSize  = mv->TDS[selector] & 0xFFFF;
 
-    if ((uint32_t)offset + 4 > segSize) {
-        printf("ERROR: Stack underflow en POP en [%.4X] (BP estaba en %d, offset %d, tam %d)\n",
-               mv->registros[IP], mv->registros[BP], offset, segSize);
-        mv->ErrorFlag = 6;
-        return;
-    }
-
     if (offset >= segSize) {
         printf("ERROR: Stack underflow en POP en [%.4X]\n", mv->registros[IP]);
         mv->ErrorFlag = 6;
@@ -879,11 +872,10 @@ void RET(TMV *mv, TOperando op_unused) {
     }
 
     // Leemos 4 bytes en big-endian y reconstruir el valor de retorno
-    uint32_t b0 = mv->memoria[addr];
-    uint32_t b1 = mv->memoria[addr + 1];
-    uint32_t b2 = mv->memoria[addr + 2];
-    uint32_t b3 = mv->memoria[addr + 3];
-    int32_t  retVal = (int32_t)((b0 << 24) | (b1 << 16) | (b2 << 8) | b3);
+    int32_t retVal = 0;
+    for (int i = 0; i < 4; i++){
+        retVal = (retVal << 8) | (unsigned char)mv->memoria[addr + i];
+    }
 
 
     // Cargamos IP con el valor extraido (salto de retorno)

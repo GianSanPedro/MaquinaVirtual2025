@@ -114,7 +114,7 @@ int main(int argc, char *argv[]){
                 } else {
                     //printf("\n");
                     //printf("\nIP ACTUAL antes de procesar: %d: \n", ipActual);
-                    //MostrarInstruccion(InstruccionActual, MV.memoria);
+                    MostrarInstruccion(InstruccionActual, MV.memoria);
                     procesarInstruccion(&MV, InstruccionActual);
                     ipActual = obtenerIP(&MV);
                     //printf("\nIP ACTUAL despues de procesar: %d: \n", obtenerIP(&MV));
