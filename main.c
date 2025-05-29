@@ -10,6 +10,7 @@
 void DecodificarInstruccion(char instruccion,char *operando1,char *operando2,char *operacion, int *ErrorFlag);
 TInstruccion LeerInstruccionCompleta(TMV *MV, int ip);
 int esIPValida(TMV *mv);
+uint32_t obtenerIP(TMV *MV);
 void reportEstado(int estado);
 TArgs parsearArgumentos(int argc, char *argv[]);
 void cargarArchivoVMX(const char *nombreArch, TMV *MV);
@@ -86,30 +87,36 @@ int main(int argc, char *argv[]){
     while (i < 7 && MV.TDS[i] != -1) {
         int base = MV.TDS[i] >> 16;
         int limite = MV.TDS[i] & 0xFFFF;
-        i++;
         printf("TDS[%d] -> base: %d (0x%04X), tamanio: %d (0x%04X)\n", i, base, base, limite, limite);
+        i++;
     }
 
     printf("\n>> Codigo assembler en ejecucion:\n");
+    printf("VERSION: %d \n", MV.version);
+    ipActual = obtenerIP(&MV);
     if (MV.version == 2){
-        while (MV.registros[IP] < tamCod && !BandStop && !MV.ErrorFlag && !MV.Aborted) {
-            ipActual = MV.registros[IP];
+        while (ipActual < tamCod && !BandStop && !MV.ErrorFlag && !MV.Aborted) {
+            ipActual = obtenerIP(&MV);
+            printf("\nIP ACTUAL: %d: \n", ipActual);
             if (!esIPValida(&MV)) {
                 printf("ERROR: IP fuera del Segmento de Codigo: [%.4X] (%d)\n", MV.registros[IP], MV.registros[IP]);
                 MV.ErrorFlag = 2;
             }
-
+            printf("PROCESO 111\n");
             InstruccionActual = LeerInstruccionCompleta(&MV, ipActual);
 
             MV.registros[IP] += InstruccionActual.tamanio;
 
             // Verifico que no se haya detectado un error en la decodificacion antes de ejecutar
             if (!MV.ErrorFlag){
-
+                printf("PROCESO 222\n");
                 // Ejecutar o detectar STOP
                 if (InstruccionActual.codOperacion == 0x0F) {
                     BandStop = 1;
                 } else {
+                    printf("\n");
+                    //printf("\nIP ACTUAL: %d: \n", ipActual);
+                    MostrarInstruccion(InstruccionActual, MV.memoria);
                     procesarInstruccion(&MV, InstruccionActual);
                 }
             }
@@ -119,11 +126,11 @@ int main(int argc, char *argv[]){
             }
         }
         if (MV.Aborted) {
-            printf("Ejecución abortada por usuario.\n");
+            printf("Ejecucion abortada por usuario.\n");
         } else if (MV.ErrorFlag) {
-            printf("Ejecución detenida por error.\n");
+            printf("Ejecucion detenida por error.\n");
         } else if (BandStop) {
-            printf("Ejecución detenida por STOP (opcode 0x0F).\n");
+            printf("Ejecucion detenida por STOP (opcode 0x0F).\n");
         }
     }
     else{
@@ -287,10 +294,20 @@ int esIPValida(TMV *MV) {
     uint32_t  csReg = MV->registros[CS];
     uint32_t  selectorCS = csReg >> 16;                  // selector
     uint32_t  baseCS = MV->TDS[selectorCS] >> 16;        // base fisica del segmento
-
     uint32_t tam = MV->TDS[selectorCS] & 0xFFFF;
-    uint32_t ip = MV->registros[IP];
+
+    uint32_t ip = obtenerIP(MV);
     return (ip >= baseCS && ip < baseCS + tam);
+}
+
+uint32_t obtenerIP(TMV *MV) {
+    uint32_t selectorIP = (MV->registros[IP]) >> 16;
+    uint32_t offsetIP = (MV->registros[IP]) &0xFFFF;
+
+    uint32_t  baseIP = MV->TDS[selectorIP] >> 16;
+    uint32_t  direccion = baseIP + offsetIP;
+
+    return direccion;
 }
 
 void reportEstado(int estado){

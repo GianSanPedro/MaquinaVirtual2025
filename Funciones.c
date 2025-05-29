@@ -8,10 +8,6 @@
 #include "Funciones.h"
 
 
-// En C int son 4 bytes
-//      short int 2 bytes
-//      char 1 byte
-
 void actualizarNZ(TMV *mv, int resultado) {
     // Limpiar bits 30 (Z) y 31 (N)
     // 0011...1111 (limpia los 2 bits superiores)
@@ -366,6 +362,8 @@ void leerString(TMV *mv) {
     int32_t ecxVal = mv->registros[ECX];
     int16_t limite = (int16_t)(ecxVal & 0xFFFF);
 
+    printf("STRING READ \n");
+
     char Texto[300];
     scanf("%s ", Texto);
     int L = strlen(Texto);
@@ -400,6 +398,7 @@ void escribirString(TMV *mv) {
     uint32_t base     = mv->TDS[selector] >> 16;
     uint32_t addr     = base + offset;
 
+    printf("STRING WRITE \n");
     // Recorro la memoria hasta el terminador '\0'
     unsigned char c;
     while ((c = mv->memoria[addr++]) != '\0') {
@@ -428,31 +427,24 @@ void breakPoint(TMV *mv) {
         return;
     }
     printf(">>Breakpoint: imagen VMI generada en '%s'\n", mv->args.nombreArchVmi);
-
-    // El while se ejecuta hasta que el user ingrese una opcion valida!
-    // 'g' go, 'q' quit, Enter solo : step
-    while (1) {
+    char ch;
+    do{
         printf("Breakpoint> (g=go, q=quit, Enter=step): ");
 
-        char ch;
         scanf("%c", &ch);
-
         if (ch == '\n') {
             // step: ejecutar una instrucción mas y volver aqui
             mv->stepMode = 1;
-            break;
         }
         else if (ch == 'g') {
             // go: continuar hasta proximo breakpoint
             mv->stepMode = 0;
-            break;
         }
         else if (ch == 'q') {
             // quit: abortar la ejecucion
             mv->Aborted = 1;
-            return;
         }
-    }
+    } while (ch != '\n' || ch != 'g' || ch == 'q');
 }
 
 int generarImagenVMI(TMV *mv, const char *nombreImagen) {

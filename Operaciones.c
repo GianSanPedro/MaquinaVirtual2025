@@ -64,6 +64,7 @@ void Disassembler(const TMV *MV) {
     }
 
     printf("\nError flag %d\n", MV->ErrorFlag);
+    printf("\Aborted flag %d\n", MV->Aborted);
     if (!hayStop) {
         printf("\nAdvertencia: STOP no presente en el codigo Assembler\n");
     }
@@ -98,7 +99,7 @@ void MostrarConstantes(TMV *mv) {
             uint32_t longitud = cursor - inicio;
 
             // Imprimimos la dirección
-            printf("[%04X] ", inicio);
+            printf(" [%04X] ", inicio);
 
             // Imprimimos los bytes en hex (hasta 7, o 6 + "..")
             if (longitud <= 7) {
