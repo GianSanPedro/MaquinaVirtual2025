@@ -65,11 +65,10 @@ void Disassembler(const TMV *MV) {
         ipTemp += inst.tamanio;
     }
 
-    printf("\nError flag %d\n", MV->ErrorFlag);
-    printf("\Aborted flag %d\n", MV->Aborted);
-    if (!hayStop) {
+    if (!hayStop && MV->version == 1) {
         printf("\nAdvertencia: STOP no presente en el codigo Assembler\n");
     }
+
 }
 
 void MostrarConstantes(TMV *mv) {
@@ -341,14 +340,16 @@ void procesarInstruccion(TMV *mv, TInstruccion inst) {
         case 0x07: JNN(mv, inst.op1); break;
     }
 
-    if ( obtenerIP(mv) != ip_backup && !(inst.codOperacion >= 0x01 && inst.codOperacion <= 0x07) && inst.codOperacion != 0x0D && inst.codOperacion != 0x0E ) {
-        printf("Advertencia: IP fue modificado por una instruccion que no deberia: 0x%02X\n", inst.codOperacion);
-    }
+    if (!(mv->ErrorFlag)){ //Para evitar pisar la bandera de otro error cuando este volviento
+        if ( obtenerIP(mv) != ip_backup && !(inst.codOperacion >= 0x01 && inst.codOperacion <= 0x07) && inst.codOperacion != 0x0D && inst.codOperacion != 0x0E ) {
+            printf("Advertencia: IP fue modificado por una instruccion que no deberia: 0x%02X\n", inst.codOperacion);
+        }
 
-    // Verifico que los saltos no salgan del segmento
-    if ( ((inst.codOperacion >= 0x01 && inst.codOperacion <= 0x07) || inst.codOperacion == 0x0D || inst.codOperacion == 0x0E ) && !esIPValida(mv)) {
-        printf("ERROR: Salto IP fuera del Segmento de Codigo: [%.4X] (%d)\n", mv->registros[IP], mv->registros[IP]);
-        mv->ErrorFlag = 2;
+        // Verifico que los saltos no salgan del segmento
+        if ( ((inst.codOperacion >= 0x01 && inst.codOperacion <= 0x07) || inst.codOperacion == 0x0D || inst.codOperacion == 0x0E ) && !esIPValida(mv)) {
+            printf("ERROR: Salto IP fuera del Segmento de Codigo: [%.4X] (%d)\n", mv->registros[IP], mv->registros[IP]);
+            mv->ErrorFlag = 2;
+        }
     }
 }
 

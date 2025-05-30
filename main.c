@@ -81,8 +81,8 @@ int main(int argc, char *argv[]){
     uint16_t tamCod = MV.TDS[selectorCS] & 0xFFFF;
     uint16_t finCS = baseCS + tamCod;
     //Comienza la ejecucion
+    /*
     printf("\n>> Tamanio codigo: %d\n", tamCod);
-
     printf("\n>> Tabla de Segmentos seteada\n");
     int i = 0;
     while (i < 7 && MV.TDS[i] != -1) {
@@ -91,10 +91,8 @@ int main(int argc, char *argv[]){
         printf("TDS[%d] -> base: %d (0x%04X), tamanio: %d (0x%04X)\n", i, base, base, limite, limite);
         i++;
     }
-
+    */
     printf("\n>> Codigo assembler en ejecucion:\n");
-    printf("VERSION: %d \n", MV.version);
-
     if (MV.version == 2){
         ipActual = obtenerIP(&MV);
         while (ipActual < finCS && !BandStop && !MV.ErrorFlag && !MV.Aborted) {
@@ -114,7 +112,7 @@ int main(int argc, char *argv[]){
                 } else {
                     //printf("\n");
                     //printf("\nIP ACTUAL antes de procesar: %d: \n", ipActual);
-                    MostrarInstruccion(InstruccionActual, MV.memoria);
+                    //MostrarInstruccion(InstruccionActual, MV.memoria);
                     procesarInstruccion(&MV, InstruccionActual);
                     ipActual = obtenerIP(&MV);
                     //printf("\nIP ACTUAL despues de procesar: %d: \n", obtenerIP(&MV));
@@ -127,17 +125,12 @@ int main(int argc, char *argv[]){
         }
         if (MV.Aborted) {
             printf("\nEjecucion abortada por usuario.\n");
-        } else if (MV.ErrorFlag) {
-            printf("\nEjecucion detenida por error.\n");
-        } else if (BandStop) {
-            printf("\nEjecucion detenida por STOP (opcode 0x0F).\n");
         }
     }
     else{
-        ipActual = obtenerIP(&MV);
-        printf("\nIP ACTUAL: %d: \n", ipActual);
-        while (ipActual < tamCod && !BandStop && !MV.ErrorFlag) {
-            ipActual = obtenerIP(&MV);
+        ipActual = MV.registros[IP];
+        while (MV.registros[IP] < tamCod && !BandStop && !MV.ErrorFlag) {
+            ipActual = MV.registros[IP];
             if (!esIPValida(&MV)) {
                 printf("ERROR: IP fuera del Segmento de Codigo: [%.4X] (%d)\n", MV.registros[IP], MV.registros[IP]);
                 MV.ErrorFlag = 2;
@@ -165,7 +158,6 @@ int main(int argc, char *argv[]){
             }
         }
     }
-
     reportEstado(MV.ErrorFlag);
     free(MV.args.parametros);
     free(MV.memoria);

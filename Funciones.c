@@ -299,21 +299,21 @@ void escribirEnPantalla(TMV *mv) { //Imprimir
 
             }
 
-            printf("[%.4X] | ", direccion);
-            if (modo & 0x01) {
-                printf("%d ", valor);
-            }
+            printf("[%.4X] : ", direccion);
             if (modo & 0x08) {
-                printf("0x%X ", valor);
+                printf("0x%X \t", valor);
             }
             if (modo & 0x04) {
-                printf("0o%o ", valor);
+                printf("0o%o \t", valor);
+            }
+            if (modo & 0x01) {
+                printf("%d \t", valor);
             }
             if (modo & 0x02) {
                 if (valor >= 32 && valor <= 126)
-                    printf("%c ", valor);
+                    printf("%c \t", valor);
                 else
-                    printf(". ");
+                    printf(". \t");
 
                 //printf("[%.4X] | %c", direccion, valor);
             }
@@ -323,6 +323,7 @@ void escribirEnPantalla(TMV *mv) { //Imprimir
                     printf("%d", (valor >> i) & 1);
                     if (i % 8 == 0 && i != 0) printf(" ");  // separador cada 8 bits
                 }
+                printf("\t");
             }
             //printf("\n>> [%.4X] | 0x%X ", direccion, valor);
             //printf("\n[%.4X] | %d | 0x%X | 0o%o \n", direccion, valor, valor, valor);
@@ -365,10 +366,10 @@ void leerString(TMV *mv) {
     int32_t ecxVal = mv->registros[ECX];
     int16_t limite = (int16_t)(ecxVal & 0xFFFF);
 
-    printf("STRING READ \n");
+    //printf("STRING READ \n");
 
     char Texto[300];
-    scanf("%s ", Texto);
+    scanf("%s", Texto);
     int L = strlen(Texto);
     int i = 0;
     uint16_t byte;
@@ -401,7 +402,7 @@ void escribirString(TMV *mv) {
     uint32_t base     = mv->TDS[selector] >> 16;
     uint32_t addr     = base + offset;
 
-    printf("STRING WRITE desde selector %d, offset %d (dir fisica %d)\n", selector, offset, addr);
+    //printf("STRING WRITE desde selector %d, offset %d (dir fisica %d)\n", selector, offset, addr);
 
     // Recorro la memoria hasta el terminador '\0'
     unsigned char c;
@@ -779,7 +780,7 @@ void PUSH(TMV *mv, TOperando op1) {
 
     // Comprobamos el stack overflow (offset negativo)
     if (newOff < 0) {
-        printf("ERROR: Stack overflow en PUSH en [%.4X]\n", mv->registros[IP]);
+        printf("\n>>ERROR: Stack overflow en PUSH en [%.4X]\n", mv->registros[IP]);
         mv->ErrorFlag = 5;
         return;
     }
@@ -811,7 +812,7 @@ void POP(TMV *mv, TOperando op1) {
     uint16_t segSize  = mv->TDS[selector] & 0xFFFF;
 
     if (offset >= segSize) {
-        printf("ERROR: Stack underflow en POP en [%.4X]\n", mv->registros[IP]);
+        printf("\n>>ERROR: Stack underflow en POP en [%.4X]\n", mv->registros[IP]);
         mv->ErrorFlag = 6;
         return;
     }
@@ -866,7 +867,7 @@ void RET(TMV *mv, TOperando op_unused) {
     uint16_t segSize   = mv->TDS[selector] & 0xFFFF;
 
     if ((uint32_t)offset >= segSize) {
-        printf("ERROR: Stack underflow en RET en [%.4X]\n", mv->registros[IP]);
+        printf("\n>>ERROR: Stack underflow en RET en [%.4X]\n", mv->registros[IP]);
         mv->ErrorFlag = 6;
         return;
     }
