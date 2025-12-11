@@ -29,7 +29,7 @@ Máquina virtual segmentada escrita en C para la materia Arquitectura de Computa
 ## Árbol del proyecto y recursos
 - Código fuente: `main.c`, `Operaciones.c/.h`, `Funciones.c/.h`, `MVTipos.h`, proyecto `MaquinaVirtual2025.cbp`.
 - `Entorno Test/Documentacion del ASSEMBLER y MV desarrollados/`: PDFs con detalle de assembler y consignas.
-- `Entorno Test/Resultados Cuestionario 1` y `Resultados Cuestionario 2`: conjuntos de `.vmx` y una `.vmi` ya probados, con capturas de salida.
+- `Entorno Test/Resultados Cuestionario 1` y `Resultados Cuestionario 2`: conjuntos de `.vmx` y una `.vmi` ya probados, con capturas de salida. Algunos casos validan resultados correctos y otros verifican la detección de errores (y que no aparezcan falsos positivos).
 - `Entorno Test/Test extra`: ejemplos `.asm` junto a sus `.vmx`/`.vmi` (p.ej. `factorial`, `cuentabits`, `pushpop`).
 - Binarios auxiliares: `Entorno Test/vmg.exe`, `vmt.exe` (ensamblador/traductor a `.vmx`, seguir instrucciones de los PDFs) y `Entorno Test/MaquinaVirtual2025.exe` (VM compilada en Windows).
 

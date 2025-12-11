@@ -29,7 +29,7 @@ Segmented virtual machine written in C for a Computer Architecture course (~2025
 ## Project layout and assets
 - Source: `main.c`, `Operaciones.c/.h`, `Funciones.c/.h`, `MVTipos.h`, `MaquinaVirtual2025.cbp`.
 - Docs: PDFs under `Entorno Test/Documentacion del ASSEMBLER y MV desarrollados/`.
-- Test sets: `Entorno Test/Resultados Cuestionario 1` and `Resultados Cuestionario 2` with proven `.vmx`/`.vmi` plus screenshots.
+- Test sets: `Entorno Test/Resultados Cuestionario 1` and `Resultados Cuestionario 2` with proven `.vmx`/`.vmi` plus screenshots. Some cases assert correct outputs, others check proper error detection (and absence of false positives).
 - Extra examples: `Entorno Test/Test extra` holds `.asm` samples with their `.vmx`/`.vmi` counterparts (`factorial`, `cuentabits`, `pushpop`, etc.).
 - Helper binaries: `Entorno Test/vmg.exe`, `vmt.exe` (assembler/translator to `.vmx`, follow the PDFs) and `Entorno Test/MaquinaVirtual2025.exe` (Windows build of the VM).
 
